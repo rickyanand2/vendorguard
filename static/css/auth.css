@@ -1,0 +1,145 @@
+/* ===== VendorGuard Auth Layout ===== */
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #1d8fa3;  /* Unified VendorGuard teal */
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-wrapper {
+  flex: 1;
+  background-color: #1d8fa3;
+  display: flex;
+  align-items: stretch;
+  padding: 0 2rem; /* Limit space between left and right sections of form */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.left-column {
+  flex: 1;
+  color: white;
+  padding: 3rem 2rem;
+  display: flex;
+  align-items: center;
+}
+
+.left-inner {
+  max-width: 460px;
+}
+
+.left-column h2 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.left-column p {
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.left-column ul {
+  list-style: none;
+  padding-left: 0;
+  line-height: 1.75;
+}
+
+.left-column ul li::before {
+  content: '•';
+  color: #38bdf8;
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+}
+
+@media (max-width: 576px) {
+  .left-column ul {
+    display: none;
+  }
+}
+.right-column {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  
+}
+
+.auth-card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 2rem 2.5rem;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+}
+
+.auth-card .logo-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1d8fa3;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.auth-card h2 {
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin: 0.25rem 0 1.5rem;
+}
+
+.form-label {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #2c3e50;
+}
+
+.btn-primary {
+  background-color: #12798A; /* Muted teal-blue */
+  border-color: #12798A;
+  color: white;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background-color: #0f5e6f;
+  border-color: #0f5e6f;
+  color: white;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: #f0f0f0;
+  background: linear-gradient(to right, #145e6b, #0f4c5c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 768px) {
+  .main-wrapper {
+    flex-direction: column;
+  }
+
+  .left-column, .right-column {
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .left-inner {
+    margin: 0 auto;
+  }
+
+  .left-column ul {
+    text-align: left;
+    margin-top: 1rem;
+  }
+}

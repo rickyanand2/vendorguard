@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}
+  Welcome to VendorGuard
+{% endblock %}
+
+{% block content %}
+  <div class="container py-5 text-center">
+    {% if user.is_authenticated %}
+      <h5 class="mb-4">Hello <strong>{{ user.full_name|default:user.email }}</strong>, welcome back!</h5>
+    {% endif %}
+
+    <!-- Hero Section -->
+    <h1 class="fw-bold display-5 mb-3">Simplifying Third-Party Risk Management</h1>
+    <p class="lead mb-4 text-muted">Streamline your vendor security assessments — fast, smart, and audit-ready.</p>
+    <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4 mb-5">Get Started</a>
+
+    <!-- Feature Cards Section -->
+    <div class="row justify-content-center text-center mb-5">
+      <div class="col-md-3">
+        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Shield" class="mb-3" width="60" />
+        <h5>Automated Risk Scoring</h5>
+        <p>Tailored security questionnaires + instant posture scoring.</p>
+      </div>
+      <div class="col-md-3">
+        <img src="https://cdn-icons-png.flaticon.com/512/281/281769.png" alt="Report" class="mb-3" width="60" />
+        <h5>Audit-Ready Reports</h5>
+        <p>Export smart PDFs for NIST, ISO, SOC2 in one click.</p>
+      </div>
+      <div class="col-md-3">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Graph" class="mb-3" width="60" />
+        <h5>Compliance Tracking</h5>
+        <p>Monitor status, gaps & remediation tasks in real time.</p>
+      </div>
+    </div>
+
+    <!-- Trusted Logos Section -->
+    <div class="my-5 text-muted">
+      <p class="mb-2">Trusted by small teams & IT professionals across sectors:</p>
+      <div class="d-flex justify-content-center gap-4 flex-wrap">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" height="32" alt="Amazon" />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" height="32" alt="Google" />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" height="32" alt="Microsoft" />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg" height="28" alt="IBM" />
+      </div>
+    </div>
+
+    <!-- Analytical Section with Placeholder Graph -->
+    <div class="row my-5 align-items-center">
+      <div class="col-md-6 text-start">
+        <h3 class="fw-bold">See Risk Scores at a Glance</h3>
+        <p class="text-muted">Get real-time insights into vendor compliance health across all departments. Identify high-risk vendors instantly with our visual risk dashboard.</p>
+      </div>
+      <div class="col-md-6">
+        <img src="https://cdn-icons-png.flaticon.com/512/9381/9381521.png" alt="risk graph demo" width="400" class="img-fluid rounded shadow-sm" />
+      </div>
+    </div>
+
+    <!-- Testimonial Section -->
+    <div class="bg-light py-5 px-3 rounded mb-5">
+      <blockquote class="blockquote">
+        <p class="fs-5">“VendorGuard helped us reduce vendor risk review time by over 70%. The audit-ready reports were a lifesaver during ISO 27001 certification.”</p>
+        <footer class="blockquote-footer mt-3">Catherine Liu, CISO at MedSecure Systems</footer>
+      </blockquote>
+    </div>
+
+    <!-- Final Call to Action -->
+    <div class="mt-5">
+      <h4 class="fw-semibold mb-2">Start protecting your organization today</h4>
+      <p class="text-muted mb-3">Free forever for small teams. No credit card required.</p>
+      <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Create Your Free Account</a>
+    </div>
+  </div>
+{% endblock %}

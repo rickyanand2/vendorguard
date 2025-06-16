@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>
+      {% block title %}
+        VendorGuard
+      {% endblock %}
+    </title>
+
+    <!-- Fonts & CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}" />
+  </head>
+  <body>
+    <div class="main-wrapper">
+      {% block left_column %}
+      {% endblock %}
+      <div class="right-column">
+        {% block content %}
+        {% endblock %}
+      </div>
+    </div>
+
+    <footer>&copy; {{ now|date:'Y' }} VendorGuard. All rights reserved.</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+      flatpickr(".flatpickr, input[name='date_of_birth']", {
+        dateFormat: 'd/m/Y',
+        maxDate: 'today',
+        altInput: true,
+        altFormat: 'F j, Y'
+      })
+    </script>
+  </body>
+</html>

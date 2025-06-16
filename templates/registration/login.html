@@ -1,0 +1,58 @@
+{% extends 'base_plain.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% now 'Y' as now %}
+
+{% block title %}
+  Login - VendorGuard
+{% endblock %}
+
+{% block left_column %}
+  <div class="left-column">
+    <div class="px-4">
+      <h2 class="fw-bold mb-3">Welcome to VendorGuard</h2>
+      <p class="text-white-50">Log in and manage your third-party risk assessments with clarity and speed.</p>
+
+      <ul class="list-unstyled mt-4 fs-6">
+        <li class="mb-3">
+          <i class="bi bi-graph-up-arrow me-2 text-white"></i>Track vendor risk in real-time
+        </li>
+        <li class="mb-3">
+          <i class="bi bi-box-arrow-down me-2 text-white"></i>Export audit-ready reports
+        </li>
+        <li class="mb-3">
+          <i class="bi bi-shield-lock me-2 text-white"></i>Maintain compliance effortlessly
+        </li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <img src="{% static 'img/logo-vg.png' %}" alt="VendorGuard Logo" style="max-height: 48px;" class="mb-2" />
+      <h2 class="mt-2">Log in to your account</h2>
+    </div>
+
+    <form method="POST" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label for="id_username" class="form-label">Email</label>
+        {{ form.username|add_class:'form-control' }}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_password" class="form-label">Password</label>
+        {{ form.password|add_class:'form-control' }}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 mt-3">Login</button>
+
+      <div class="text-center mt-3">
+        Don’t have an account? <a href="{% url 'register' %}">Register</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

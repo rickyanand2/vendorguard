@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "widget_tweaks",
     ### Custom Apps
     "accounts",
+    "website",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +59,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     ### Security
     "django.middleware.csrf.CsrfViewMiddleware",
+    ### Extras
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -71,6 +75,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # ✅ Add your custom processor
+                "accounts.context_processors.user_membership",
             ],
         },
     },
@@ -106,6 +112,9 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
+AUTH_PASSWORD_VALIDATORS = []
+
+""" MAKE SURE TO ENABLE IN PRODUCTION
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -120,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
+"""
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -150,6 +159,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ### Custom User model
 AUTH_USER_MODEL = "accounts.CustomUser"
 
+
 ### Redirect override: to simplify your flow
-LOGIN_REDIRECT_URL = "/accounts/profile/"
-LOGOUT_REDIRECT_URL = "home"
+# LOGIN_REDIRECT_URL = "/dashboard/"
+# LOGOUT_REDIRECT_URL = "/home/"
+# LOGIN_URL = "/accounts/login/"  # this is correct and must NOT be the same as LOGOUT_REDIRECT_URL

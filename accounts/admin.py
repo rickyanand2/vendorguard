@@ -1,34 +1,46 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
-from .forms import CustomUserCreationForm, CustomUserChangeForm
+from .models import CustomUser, Organization, Membership, License
+from .forms import CustomSoloUserCreationForm, CustomUserChangeForm
 
 
+@admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm
-    form = CustomUserChangeForm
     model = CustomUser
+    add_form = CustomSoloUserCreationForm
+    form = CustomUserChangeForm
 
-    list_display = ("email", "full_name", "date_of_birth", "is_staff", "is_active")
-    list_filter = ("is_staff", "is_active")
-    ordering = ("email",)
+    list_display = ("email", "first_name", "last_name", "is_active", "is_admin")
+    list_filter = ("is_admin", "is_active")
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("full_name", "date_of_birth")}),
+        (
+            "Personal info",
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "job_title",
+                    "phone",
+                    "address",
+                    "state",
+                    "country",
+                )
+            },
+        ),
         (
             "Permissions",
             {
                 "fields": (
-                    "is_staff",
                     "is_active",
+                    "is_admin",
                     "is_superuser",
                     "groups",
                     "user_permissions",
                 )
             },
         ),
-        ("Important dates", {"fields": ("last_login",)}),
     )
 
     add_fieldsets = (
@@ -38,16 +50,33 @@ class CustomUserAdmin(UserAdmin):
                 "classes": ("wide",),
                 "fields": (
                     "email",
-                    "full_name",
-                    "date_of_birth",
+                    "first_name",
+                    "last_name",
                     "password1",
                     "password2",
-                    "is_staff",
-                    "is_active",
                 ),
             },
         ),
     )
 
+    search_fields = ("email",)
+    ordering = ("email",)
 
-admin.site.register(CustomUser, CustomUserAdmin)
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "domain", "is_personal")
+    search_fields = ("name", "domain")
+    list_filter = ("is_personal",)
+
+
+@admin.register(Membership)
+class MembershipAdmin(admin.ModelAdmin):
+    list_display = ("user", "organization", "role")
+    list_filter = ("role",)
+
+
+@admin.register(License)
+class LicenseAdmin(admin.ModelAdmin):
+    list_display = ("organization", "plan", "is_trial", "start_date", "end_date")
+    list_filter = ("plan", "is_trial")

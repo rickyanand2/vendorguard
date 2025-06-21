@@ -1,82 +1,178 @@
+from django.db import models
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     PermissionsMixin,
     BaseUserManager,
 )
-from django.db import models
+from django.utils import timezone
 
-########################################################################################
-# class CustomUserManager
+
+# ======================================================================================
+# USER MANAGER
 # Custom user manager handles user and superuser creation || Overrides default user model
-########################################################################################
-
-
+# ======================================================================================
 class CustomUserManager(BaseUserManager):
 
-    ##################################################
-    # def create_user:
-    # Creates and saves a User and checks email is not empty
-    ##################################################
-
-    def create_user(
-        self, email, full_name, date_of_birth, password=None, **extra_fields
-    ):
-
+    # Creates and saves a regular user with the given details.
+    def create_user(self, email, first_name, last_name, password=None, **extra_fields):
         if not email:
-            raise ValueError("Email is required")
+            raise ValueError("Users must have a valid email address")
 
         email = self.normalize_email(email)
-        full_name = extra_fields.pop("full_name", "")
 
         # Create user object with provided fields
         user = self.model(
             email=email,
-            full_name=full_name,
-            date_of_birth=date_of_birth,
-            **extra_fields
+            first_name=first_name,
+            last_name=last_name,
+            **extra_fields,
         )
 
         user.set_password(password)  # Hashes the password securely
         user.save(using=self._db)  # Save using default database
         return user
 
-    ##################################################
-    # def create_superuser:
-    # Same logic as regular user plus setting extra permissions
-    ##################################################
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
+    # Creates and saves a superuser
+    def create_superuser(
+        self, email, first_name, last_name, password=None, **extra_fields
+    ):
+        extra_fields.setdefault("is_admin", True)
         extra_fields.setdefault("is_superuser", True)
-        return self.create_user(email, password, **extra_fields)
+
+        user = self.create_user(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password=password,
+            **extra_fields,
+        )
+        user.is_admin = True
+        user.is_superuser = True
+        user.save(using=self._db)
+        return user
 
 
-########################################################################################
-# class CustomUser
-# Actual user model
-########################################################################################
+# ======================================================================================
+# Organization (Multi-Tenant Backbone)
+# For multi tenancy - Each org is identified by domain; used to group users, plans, trials
+# ======================================================================================
+class Organization(models.Model):
+    name = models.CharField(
+        max_length=255, unique=True
+    )  # Enforced uniqueness to prevent duplicates
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_personal = models.BooleanField(default=False)  #  True for individuals
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True)  # Username field
-    date_of_birth = models.DateField(null=True, blank=True)
-    full_name = models.CharField(max_length=255)
+    domain = models.CharField(
+        max_length=100, blank=True, null=True
+    )  # Optional: derived from email
 
-    # These fields are required for admin and auth
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)  # Determines admin access
-
-    # Tell Django to use our custom manager
-    objects = CustomUserManager()
-
-    # Email is used to log in instead of username
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["full_name"]  # Required for createsuperuser
-
-    def get_full_name(self):
-        return self.full_name or ""
-
-    def get_short_name(self):
-        return self.full_name.split()[0] if self.full_name else ""
 
     def __str__(self):
-        return self.email  # Displayed as identifier in admin
+        return self.name
+
+
+# ======================================================================================
+# CUSTOM USER
+# User configurations
+# ======================================================================================
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+
+    email = models.EmailField(unique=True, max_length=255)  # Username field
+
+    # Identity fields
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+
+    # Profile metadata
+    job_title = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+
+    # Email verification flag (controlled by token/email flow)
+    is_verified_email = models.BooleanField(default=False)
+
+    # Access control
+    is_active = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)  # Used for admin panel
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_owner(self):
+        try:
+            return self.membership.role == "owner"
+        except Membership.DoesNotExist:
+            return False
+
+    @property
+    def organization(self):
+        try:
+            return self.membership.organization
+        except Membership.DoesNotExist:
+            return None
+
+    USERNAME_FIELD = "email"  # Email is used to log in instead of username
+    REQUIRED_FIELDS = [
+        "last_name",
+    ]
+
+    objects = CustomUserManager()  # Tell Django to use our custom manager
+
+    # Displayed as identifier in admin
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} <{self.email}>"
+
+    @property
+    def is_staff(self):
+        return self.is_admin
+
+
+# ==============================================================
+# MEMBERSHIP MODEL (User ↔ Org)
+# Allows linking users to orgs, with role-based flags like is_owner
+# ==============================================================
+from django.conf import settings
+
+
+class Membership(models.Model):
+    ROLE_CHOICES = [
+        ("owner", "Owner"),
+        ("admin", "Admin"),
+        ("member", "Member"),
+        ("viewer", "Viewer"),
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    organization = models.ForeignKey("Organization", on_delete=models.CASCADE)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
+
+    def __str__(self):
+        return f"{self.user.email} - {self.role} of {self.organization.name}"
+
+
+# ======================================================================================
+# LICENSE MODEL (Plan Management)
+# ======================================================================================
+class License(models.Model):
+    PLAN_CHOICES = [
+        ("standard", "Standard"),
+        ("teams", "Teams"),
+        ("enterprise", "Enterprise"),
+    ]
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE)
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default="standard")
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField()
+    is_trial = models.BooleanField(default=True)
+
+    def is_active(self):
+        return self.end_date >= timezone.now()
+
+    def __str__(self):
+        return f"{self.organization.name} – {self.plan.capitalize()}"

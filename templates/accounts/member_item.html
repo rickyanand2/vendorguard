@@ -1,0 +1,11 @@
+<div id="member-{{ member.id }}" class="d-flex justify-content-between align-items-center border-bottom py-2">
+  <div>
+    <strong>{{ member.user.get_full_name }}</strong> — {{ member.user.email }}
+    {% if member.is_owner %}
+      <span class="badge bg-info ms-2">Owner</span>
+    {% endif %}
+  </div>
+  {% if not member.is_owner %}
+    <button hx-post="{% url 'accounts:remove_user' member.id %}" hx-target="#member-{{ member.id }}" hx-swap="outerHTML" class="btn btn-sm btn-outline-danger">Remove</button>
+  {% endif %}
+</div>

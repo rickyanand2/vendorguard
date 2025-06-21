@@ -1,29 +1,47 @@
-{% extends 'base.html' %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Your Profile</h3>
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item">
-            <strong>Full Name:</strong> {{ user.full_name }}
-          </li>
-          <li class="list-group-item">
-            <strong>Email:</strong> {{ user.email }}
-          </li>
-          <li class="list-group-item">
-            <strong>Date of Birth:</strong>
-            {{ user.date_of_birth|date:"d/m/Y" }}
-          </li>
-        </ul>
-        <div class="text-center mt-4">
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Logout</button>
-          </form>
-        </div>
+{% extends 'base.html' %}
+{% block title %}
+  Your Profile
+{% endblock %}
+
+{% block content %}
+  <div class="container py-4">
+    <h2 class="mb-4">Your Profile</h2>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h5>User Details</h5>
+        <p>
+          <strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}
+        </p>
+        <p>
+          <strong>Email:</strong> {{ user.email }}
+        </p>
+        <p>
+          <strong>Job Title:</strong> {{ user.job_title }}
+        </p>
+        <p>
+          <strong>Phone:</strong> {{ user.phone }}
+        </p>
+        <p>
+          <strong>Country:</strong> {{ user.country }}
+        </p>
+      </div>
+
+      <div class="col-md-6">
+        <h5>Organization</h5>
+        <p>
+          <strong>Org Name:</strong> {{ org.name }}
+        </p>
+        <p>
+          <strong>Domain:</strong> {{ org.domain }}
+        </p>
+        <p>
+          <strong>Plan:</strong> {{ license.plan|capfirst }} {% if license.is_trial %}(Trial){% endif %}
+        </p>
+        <p>
+          <strong>Expires:</strong> {{ license.end_date }}
+        </p>
       </div>
     </div>
   </div>
-</div>
 {% endblock %}

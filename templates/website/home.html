@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+  VendorGuard – Effortless Vendor Risk Management
+{% endblock %}
+
+{% block content %}
+  <!-- HERO -->
+  <section class="bg-gradient py-5" style="background: linear-gradient(to right, #e0f2fe, #f8fafc);">
+    <div class="container py-5">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1 class="display-4 fw-bold">Effortless Vendor<br />Risk Management</h1>
+          <p class="lead text-muted">Assess third-party risk in minutes, not weeks. PDF-ready reports. Actionable scores.</p>
+          <div class="mt-4">
+            <a href="{% url 'accounts:register_solo' %}" class="btn btn-brand me-3">Get Started Free</a>
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline-brand">See It In Action</a>
+          </div>
+        </div>
+        <div class="col-md-6 text-center mt-4 mt-md-0">
+          <img src="{% static 'images/hero-placeholder.png' %}" alt="App preview" class="img-fluid rounded shadow-sm" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SVG WAVE -->
+  <div class="svg-wave">
+    <svg viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#f8fafc" d="M0,32L80,53.3C160,75,320,117,480,117.3C640,117,800,75,960,53.3C1120,32,1280,32,1360,32L1440,32L1440,0L1360,0C1280,0,1120,0,960,0C800,0,640,0,480,0C320,0,160,0,80,0L0,0Z" />
+    </svg>
+  </div>
+
+  <!-- TRUSTED LOGOS -->
+  <section class="container text-center py-3">
+    <p class="text-muted mb-3">Trusted by councils, SMBs, and health providers</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <img src="https://via.placeholder.com/100x40?text=Logo" class="opacity-50" />
+      <img src="https://via.placeholder.com/100x40?text=Logo" class="opacity-50" />
+      <img src="https://via.placeholder.com/100x40?text=Logo" class="opacity-50" />
+      <img src="https://via.placeholder.com/100x40?text=Logo" class="opacity-50" />
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="container py-5">
+    <h4 class="text-center mb-5 fw-semibold">Feature Highlights</h4>
+    <div class="row g-4 text-center">
+      <div class="col-md-3">
+        <div class="card-soft">
+          <div class="bi bi-shield-lock fs-2 text-primary mb-2"></div>
+          <p class="fw-medium mb-0">Auto Risk Scoring</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-soft">
+          <div class="bi bi-file-earmark-text fs-2 text-primary mb-2"></div>
+          <p class="fw-medium mb-0">PDF Reports</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-soft">
+          <div class="bi bi-journal-check fs-2 text-primary mb-2"></div>
+          <p class="fw-medium mb-0">Smart Questionnaire</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-soft">
+          <div class="bi bi-clipboard-data fs-2 text-primary mb-2"></div>
+          <p class="fw-medium mb-0">Audit-Ready Logs</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="container py-5">
+    <h4 class="text-center mb-5 fw-semibold">How It Works</h4>
+    <div class="row text-center">
+      <div class="col-md-4">
+        <div class="step-circle">1</div>
+        <h6 class="fw-semibold">Invite Vendor</h6>
+        <p class="text-muted">Send a secure link via email</p>
+      </div>
+      <div class="col-md-4">
+        <div class="step-circle">2</div>
+        <h6 class="fw-semibold">Vendor Completes Questionnaire</h6>
+        <p class="text-muted">Simple, guided workflow for faster turnaround</p>
+      </div>
+      <div class="col-md-4">
+        <div class="step-circle">3</div>
+        <h6 class="fw-semibold">You Download the Report</h6>
+        <p class="text-muted">Score, PDF, and remediation summary</p>
+      </div>
+    </div>
+  </section>
+{% endblock %}

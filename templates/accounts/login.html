@@ -38,20 +38,26 @@
     <form method="POST" novalidate>
       {% csrf_token %}
 
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
       <div class="mb-3">
         <label for="id_username" class="form-label">Email</label>
         {{ form.username|add_class:'form-control' }}
+        {{ form.username.errors }}
       </div>
 
       <div class="mb-3">
         <label for="id_password" class="form-label">Password</label>
         {{ form.password|add_class:'form-control' }}
+        {{ form.username.errors }}
       </div>
 
       <button type="submit" class="btn btn-primary w-100 mt-3">Login</button>
 
       <div class="text-center mt-3">
-        Don’t have an account? <a href="{% url 'register' %}">Register</a>
+        Don’t have an account? <a href="{% url 'accounts:register_solo' %}">Register</a>
       </div>
     </form>
   </div>

@@ -1,0 +1,153 @@
+{% extends 'base_plain.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}
+  Register - VendorGuard
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="auth-card">
+      <!-- 🔷 Logo and Header -->
+      <div class="text-center mb-4">
+        <img src="{% static 'img/logo-vg.png' %}" alt="VendorGuard Logo" style="max-height: 60px" />
+        <h2 class="mt-3">Create your account</h2>
+      </div>
+
+      <!-- 🔐 Registration Form -->
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <!-- 🔴 Show non-field form errors -->
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          <!-- Email -->
+          <div class="col-md-4 text-end">
+            <label for="id_email" class="form-label">
+              {% if form.email.field.required %}
+                <span class="text-danger">*</span>
+              {% endif %}Email:
+            </label>
+          </div>
+          <div class="col-md-8">
+            {{ form.email|add_class:'form-control' }}
+            {% if form.email.errors %}
+              <div class="text-danger small">{{ form.email.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <!-- Password -->
+          <div class="col-md-4 text-end">
+            <label for="id_password1" class="form-label">
+              {% if form.email.field.required %}
+                <span class="text-danger">*</span>
+              {% endif %}Password:
+            </label>
+          </div>
+          <div class="col-md-8">
+            {{ form.password1|add_class:'form-control' }}
+            {% if form.password1.errors %}
+              <div class="text-danger small">{{ form.password1.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="col-md-4 text-end">
+            <label for="id_password2" class="form-label">
+              {% if form.email.field.required %}
+                <span class="text-danger">*</span>
+              {% endif %}Confirm Password:
+            </label>
+          </div>
+          <div class="col-md-8">
+            {{ form.password2|add_class:'form-control' }}
+            {% if form.password2.errors %}
+              <div class="text-danger small">{{ form.password2.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <!-- First Name -->
+          <div class="col-md-4 text-end">
+            <label for="id_first_name" class="form-label">First Name:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.first_name|add_class:'form-control' }}
+            {% if form.first_name.errors %}
+              <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Last Name -->
+          <div class="col-md-4 text-end">
+            <label for="id_last_name" class="form-label">Last Name:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.last_name|add_class:'form-control' }}
+            {% if form.last_name.errors %}
+              <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Job Title -->
+          <div class="col-md-4 text-end">
+            <label for="id_job_title" class="form-label">Job Title:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.job_title|add_class:'form-control' }}
+            {% if form.job_title.errors %}
+              <div class="text-danger small">{{ form.job_title.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Phone -->
+          <div class="col-md-4 text-end">
+            <label for="id_phone" class="form-label">Phone:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.phone|add_class:'form-control' }}
+            {% if form.phone.errors %}
+              <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- State -->
+          <div class="col-md-4 text-end">
+            <label for="id_state" class="form-label">State:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.state|add_class:'form-control' }}
+            {% if form.state.errors %}
+              <div class="text-danger small">{{ form.state.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Country -->
+          <div class="col-md-4 text-end">
+            <label for="id_country" class="form-label">Country:</label>
+          </div>
+          <div class="col-md-8">
+            {{ form.country|add_class:'form-control' }}
+            {% if form.country.errors %}
+              <div class="text-danger small">{{ form.country.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-primary w-50">Register</button>
+        </div>
+
+        <!-- Link to Login -->
+        <div class="text-center mt-3">
+          <p class="text-sm text-center mt-4">
+            <strong>Are you a company?</strong>
+            <a href="{% url 'accounts:register_team' %}">Register your team</a>
+          </p>Already have an account? <a href="{% url 'accounts:login' %}">Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

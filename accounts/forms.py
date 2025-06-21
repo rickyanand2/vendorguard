@@ -3,18 +3,87 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser
 
 
-class CustomUserCreationForm(UserCreationForm):
-    full_name = forms.CharField(max_length=255, required=True)
-    date_of_birth = forms.DateField(
-        required=True, widget=forms.DateInput(attrs={"type": "date"})
+# ======================================================================================
+# 📝 Solo User Registration Form
+# For individuals signing up via public form (creates a personal org automatically)
+# ======================================================================================
+class CustomSoloUserCreationForm(UserCreationForm):
+
+    class Meta:
+        model = CustomUser
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "job_title",
+            "phone",
+            "state",
+            "country",
+            "password1",
+            "password2",
+        )
+
+        widgets = {
+            "first_name": forms.TextInput(attrs={"placeholder": "John"}),
+            "last_name": forms.TextInput(attrs={"placeholder": "Doe"}),
+            "email": forms.EmailInput(attrs={"placeholder": "john@example.com"}),
+        }
+
+
+# ======================================================================================
+# 🏢 Teams/Enterprise Registration Form
+# For orgs signing up via special CTA ("For Teams")
+# ======================================================================================
+class CustomTeamsCreationForm(UserCreationForm):
+    org_name = forms.CharField(label="Organization Name", max_length=255)
+    domain = forms.CharField(
+        label="Company Domain (e.g. acme.com)",
+        max_length=100,
+        required=True,
+        help_text="Used to associate all users from your domain with your team account",
     )
 
     class Meta:
         model = CustomUser
-        fields = ("email", "full_name", "date_of_birth", "password1", "password2")
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "job_title",
+            "phone",
+            "state",
+            "country",
+            "password1",
+            "password2",
+        )
+        widgets = {
+            "first_name": forms.TextInput(attrs={"placeholder": "Jane"}),
+            "last_name": forms.TextInput(attrs={"placeholder": "Smith"}),
+            "email": forms.EmailInput(attrs={"placeholder": "jane@acme.com"}),
+        }
 
 
+class TeamInviteForm(forms.Form):
+    email = forms.EmailField(label="Email")
+    job_title = forms.CharField(label="Job Title", max_length=100)
+
+
+# ======================================================================================
+# 🔧 Admin Edit Form for CustomUser (visible in Django Admin)
+# ======================================================================================
 class CustomUserChangeForm(UserChangeForm):
     class Meta:
         model = CustomUser
-        fields = ("email", "date_of_birth", "is_active", "is_staff")
+        fields = (
+            "email",
+            "first_name",
+            "last_name",
+            "is_active",
+            "is_admin",  # Uses the @property is_staff
+            "job_title",
+            "phone",
+            "address",
+            "state",
+            "country",
+            "is_verified_email",
+        )

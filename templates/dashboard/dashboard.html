@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}
+  Dashboard
+{% endblock %}
+
+{% block content %}
+  <div class="container py-5">
+    <h2 class="mb-4">Welcome back, {{ user.full_name|default:user.email }}!</h2>
+    <p class="text-muted">This will become your centralized risk management dashboard.</p>
+  </div>
+{% endblock %}

@@ -44,9 +44,13 @@ INSTALLED_APPS = [
     ### Other apps
     "widget_tweaks",
     ### Custom Apps
-    "accounts",
+    "accounts",  # Authentication and Authorization
     "website",
     "dashboard",
+    "vendors",
+    "assessments",  # Third party risk assessments
+    "utils",  # Form tags and other shared resources
+    "workflow",
 ]
 
 MIDDLEWARE = [

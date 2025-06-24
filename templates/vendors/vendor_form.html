@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">
+    {% if form.instance.pk %} Edit Vendor {% else %} Add Vendor {% endif %}
+  </h2>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        <strong>Vendor Info Errors:</strong>
+        <ul class="mb-0">
+          {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+              <li>{{ field|capfirst }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if trust_form.errors %}
+      <div class="alert alert-danger">
+        <strong>Trust Profile Errors:</strong>
+        <ul class="mb-0">
+          {% for field, errors in trust_form.errors.items %}
+            {% for error in errors %}
+              <li>{{ field|capfirst }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+<!-- Top Vendor Info Section -->
+<div class="p-4 border rounded bg-light mb-4" >
+  <h4 class="mb-3 border-bottom pb-2">
+    <i class="bi bi-building me-1"></i> Vendor Info
+  </h4>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    {{ form.name.label_tag }} {{ form.name }}
+  </div>
+  <div class="col-md-6">
+    {{ form.name.label_tag }} {{ form.industry }}
+  </div>
+  <div class="col-md-6">
+    {{ form.contact_email.label_tag }} {{ form.contact_email }}
+  </div>
+  <div class="col-md-6">
+    {{ form.website.label_tag }} {{ form.website }}
+  </div>
+  <div class="col-12">
+    {{ form.description.label_tag }} {{ form.description }}
+  </div>
+</div>
+
+
+  
+  
+</div>
+
+   
+
+    <!-- Trust Profile Section -->
+    {% if trust_form %}
+    <div class="p-4 border rounded bg-light"
+         x-data="{ breached: {{ trust_form.has_data_breach.value|yesno:'true,false'|safe }} }">
+      <h4 class="mb-3"><i class="bi bi-shield-check me-1"></i> Trust Profile</h4>
+
+      <div class="row row-cols-1 row-cols-md-3 g-3">
+        <div>{% form_field trust_form.has_cyber_insurance %}</div>
+
+        <div class="form-check mt-2 ms-2">
+          <input type="checkbox"
+                 name="{{ trust_form.has_data_breach.name }}"
+                 class="form-check-input"
+                 id="breach-toggle"
+                 x-model="breached"
+                 {% if trust_form.has_data_breach.value %} checked {% endif %}>
+          <label class="form-check-label" for="breach-toggle">
+            {{ trust_form.has_data_breach.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="row mt-3" x-show="breached" x-transition>
+        <div class="col-md-4">
+          <label for="{{ trust_form.last_breach_date.id_for_label }}" class="form-label">
+            Last breach date:
+          </label>
+          <input type="date" name="{{ trust_form.last_breach_date.name }}"
+                 value="{{ trust_form.last_breach_date.value|default_if_none:'' }}"
+                 class="form-control" style="max-width: 250px;" />
+        </div>
+      </div>
+
+      <div class="mt-3">
+        {% form_field trust_form.notes %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Certifications Section -->
+    {% if cert_formset %}
+    <div class="p-4 border rounded bg-light mt-4">
+      <h4 class="mb-3"><i class="bi bi-patch-check me-1"></i> Certifications</h4>
+
+      {{ cert_formset.management_form }}
+      {% for form in cert_formset.forms %}
+        <div class="border p-3 rounded mb-3 bg-white">
+          <div class="row row-cols-1 row-cols-md-3 g-3">
+            <div>{% form_field form.type %}</div>
+            <div>{% form_field form.issued_date %}</div>
+            <div>{% form_field form.expiry_date %}</div>
+            <div>{% form_field form.cert_number %}</div>
+            <div>{% form_field form.artifact %}</div>
+            <div>{% form_field form.external_url %}</div>
+          </div>
+          <div class="mt-3">
+            {% form_field form.notes %}
+          </div>
+          {% if form.DELETE %}
+            <div class="mt-2 form-check">
+              {{ form.DELETE }} <label class="form-check-label">Delete this certification</label>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Submit Buttons -->
+    <div class="mt-4 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{% url 'vendors:vendor_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

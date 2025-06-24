@@ -1,0 +1,94 @@
+[
+  {
+    "model": "workflow.workflow",
+    "pk": 1,
+    "fields": {
+      "name": "Assessment Workflow",
+      "description": "Workflow for handling security assessments"
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 1,
+    "fields": {
+      "workflow": 1,
+      "name": "Draft",
+      "is_initial": true,
+      "is_final": false
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 2,
+    "fields": {
+      "workflow": 1,
+      "name": "In Review",
+      "is_initial": false,
+      "is_final": false
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 3,
+    "fields": {
+      "workflow": 1,
+      "name": "Submitted",
+      "is_initial": false,
+      "is_final": true
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 4,
+    "fields": {
+      "workflow": 1,
+      "name": "Rejected",
+      "is_initial": false,
+      "is_final": false
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 1,
+    "fields": {
+      "workflow": 1,
+      "from_state": 1,
+      "to_state": 2,
+      "name": "Submit for Review",
+      "role_required": "owner"
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 2,
+    "fields": {
+      "workflow": 1,
+      "from_state": 2,
+      "to_state": 3,
+      "name": "Approve Submission",
+      "role_required": "reviewer"
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 3,
+    "fields": {
+      "workflow": 1,
+      "from_state": 2,
+      "to_state": 4,
+      "name": "Reject Submission",
+      "role_required": "reviewer"
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 4,
+    "fields": {
+      "workflow": 1,
+      "from_state": 4,
+      "to_state": 1,
+      "name": "Revise and Resubmit",
+      "role_required": "owner"
+    }
+  }
+]

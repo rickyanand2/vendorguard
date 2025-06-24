@@ -1,0 +1,38 @@
+[
+  {
+    "model": "assessments.question",
+    "pk": 1,
+    "fields": {
+      "questionnaire": 1,
+      "text": "Does the organization have an information security policy?",
+      "help_text": "ISO 27001 clause 5.2 – Information Security Policy"
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 2,
+    "fields": {
+      "questionnaire": 1,
+      "text": "Are roles and responsibilities for information security clearly defined?",
+      "help_text": "ISO 27001 clause 5.3 – Organizational roles"
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 3,
+    "fields": {
+      "questionnaire": 2,
+      "text": "Is multi-factor authentication enforced for all user access to production systems?",
+      "help_text": "SOC 2 – Logical Access Controls"
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 4,
+    "fields": {
+      "questionnaire": 2,
+      "text": "Is system activity monitored and logged?",
+      "help_text": "SOC 2 – System Operations"
+    }
+  }
+]

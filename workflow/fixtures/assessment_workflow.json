@@ -1,0 +1,73 @@
+[
+  {
+    "model": "workflow.workflow",
+    "pk": 1,
+    "fields": {
+      "name": "Assessment Workflow",
+      "description": "Standard workflow for vendor assessments"
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 1,
+    "fields": {
+      "workflow": 1,
+      "name": "Draft",
+      "is_initial": true,
+      "is_final": false
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 2,
+    "fields": {
+      "workflow": 1,
+      "name": "Review",
+      "is_initial": false,
+      "is_final": false
+    }
+  },
+  {
+    "model": "workflow.state",
+    "pk": 3,
+    "fields": {
+      "workflow": 1,
+      "name": "Submitted",
+      "is_initial": false,
+      "is_final": true
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 1,
+    "fields": {
+      "workflow": 1,
+      "from_state": 1,
+      "to_state": 2,
+      "role_required": "Reviewer",
+      "name": "Submit for Review"
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 2,
+    "fields": {
+      "workflow": 1,
+      "from_state": 2,
+      "to_state": 3,
+      "role_required": "Approver",
+      "name": "Approve and Submit"
+    }
+  },
+  {
+    "model": "workflow.transition",
+    "pk": 3,
+    "fields": {
+      "workflow": 1,
+      "from_state": 2,
+      "to_state": 1,
+      "role_required": "Reviewer",
+      "name": "Send Back to Draft"
+    }
+  }
+]

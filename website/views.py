@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 
 
 # ================================
-# 🏠 Home View (Public or After Login)
+# 🏠 Home View (Public)
 # ================================
 def home(request):
     return render(request, "website/home.html")

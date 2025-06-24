@@ -1,0 +1,22 @@
+[
+  {
+    "model": "vendors.vendor",
+    "pk": 1,
+    "fields": {
+      "name": "Acme Corp",
+      "industry": "Technology",
+      "website": "https://acme.example.com",
+      "contact_email": "contact@acme.example.com"
+    }
+  },
+  {
+    "model": "vendors.vendor",
+    "pk": 2,
+    "fields": {
+      "name": "Globex Inc",
+      "industry": "Finance",
+      "website": "https://globex.example.com",
+      "contact_email": "security@globex.example.com"
+    }
+  }
+]

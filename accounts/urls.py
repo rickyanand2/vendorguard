@@ -12,10 +12,11 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),  # ✅ Use your custom logout view
     path("profile/", views.profile, name="profile"),
     path("manage-team/", views.manage_team, name="manage_team"),
+    # To be developed later - Invite and remove team members in Team/ Enterprise plans
+    path("invite/", views.invite_user_placeholder, name="invite_user"),
     path(
         "remove-member/<int:user_id>/",
-        views.remove_team_member,
+        views.remove_team_member_placeholder,
         name="remove_team_member",
     ),
-    # path("invite/", views.invite_user, name="invite_user"),
 ]

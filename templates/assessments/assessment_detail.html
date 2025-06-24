@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}
+  Assessment Detail
+{% endblock %}
+
+{% block content %}
+  <div class="container mt-4">
+    <!-- File: templates/assessments/assessment_detail.html -->
+
+    {% if assessment.workflowobject.current_state.name == 'Draft' %}
+      <form method="post" action="{% url 'assessments:submit_for_review' assessment.id %}">
+        {% csrf_token %}
+        <button class="btn btn-primary">Submit for Review</button>
+      </form>
+    {% endif %}
+
+    <h2>Assessment: {{ assessment.solution.name }}</h2>
+    <p>
+      <strong>Vendor:</strong> {{ assessment.solution.vendor.name }}
+    </p>
+    <p>
+      <strong>Questionnaire:</strong> {{ assessment.questionnaire.name }}
+    </p>
+    <p>
+      <strong>Status:</strong> {{ assessment.status }}
+    </p>
+    <p>
+      <strong>Score:</strong> {{ assessment.score|default:'N/A' }}
+    </p>
+
+    <hr />
+    <h4>Responses:</h4>
+    {% if answers %}
+      <ul>
+        {% for answer in answers %}
+          <li>
+            <strong>{{ answer.question.text }}</strong>: {{ answer.response }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No answers submitted yet.</p>
+    {% endif %}
+
+    <a href="{% url 'assessments:answer_questions' assessment.id %}" class="btn btn-primary mt-3">Answer/Update Questions</a>
+  </div>
+{% endblock %}

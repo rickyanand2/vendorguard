@@ -1,0 +1,20 @@
+[
+  {
+    "model": "assessments.templateanswer",
+    "pk": 1,
+    "fields": {
+      "question": 1,
+      "default_response": "yes",
+      "explanation": "Policy document available and communicated to all staff."
+    }
+  },
+  {
+    "model": "assessments.templateanswer",
+    "pk": 2,
+    "fields": {
+      "question": 3,
+      "default_response": "partial",
+      "explanation": "MFA is enabled for admin roles but not for all staff."
+    }
+  }
+]

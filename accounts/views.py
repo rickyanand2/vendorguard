@@ -221,11 +221,24 @@ def manage_team(request):
     )
 
 
+# Placeholder / Functionality to be implementeds
+@login_required
+def invite_user_placeholder(request):
+    return render(
+        request,
+        "accounts/feature_placeholder.html",
+        {
+            "feature_name": "Invite Team Member",
+        },
+    )
+
+
 # --------------------------
-# ❌ Remove Member (AJAX/HTMX)
+# ❌ Remove Member (AJAX/HTMX) - Placeholder / Functionality to be implemented
 # --------------------------
 @login_required
-def remove_team_member(request, user_id):
+def remove_team_member_placeholder(request, user_id):
+    """
     membership = Membership.objects.filter(user=request.user).first()
     if not membership or membership.role != "owner":
         return HttpResponseForbidden("Only owners can remove members.")
@@ -239,3 +252,11 @@ def remove_team_member(request, user_id):
         user_to_remove.delete()
         return HttpResponse("")  # HTMX partial update
     return HttpResponseForbidden("Unauthorized.")
+    """
+    return render(
+        request,
+        "accounts/feature_placeholder.html",
+        {
+            "feature_name": f"Remove Team Member (User ID: {user_id})",
+        },
+    )

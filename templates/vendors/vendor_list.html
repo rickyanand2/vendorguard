@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Vendors</h2>
+      <a href="{% url 'vendors:vendor_add' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Add Vendor</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Vendor Name</th>
+            <th scope="col">Trust Score</th>
+            <th scope="col">Solutions</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vendor in vendors %}
+            <tr>
+              <td class="fw-semibold">{{ vendor.name }}</td>
+              <td>{{ vendor.trust_profile.trust_score }}</td>
+              <td>
+                <ul class="list-unstyled mb-0">
+                  {% for solution in vendor.solutions.all %}
+                    <li class="mb-2">
+                      <strong>{{ solution.name }}</strong>
+                      <span class="text-muted">({{ solution.get_solution_type_display }})</span>
+                      {% if solution.assessment %}
+                        <a href="{% url 'assessments:view_assessment' solution.assessment.id %}" class="btn btn-sm btn-success ms-2">View</a>
+                      {% else %}
+                        <a href="{% url 'assessments:start_assessment' solution.id %}" class="btn btn-sm btn-outline-primary ms-2">Start</a>
+                      {% endif %}
+                    </li>
+                  {% empty %}
+                    <li>
+                      <em>No solutions yet</em>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td>
+                <div class="d-grid gap-2">
+                  <a href="{% url 'vendors:add_solution' vendor.id %}" class="btn btn-sm btn-outline-secondary">+ Add Solution</a>
+                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-sm btn-warning">Archive</a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

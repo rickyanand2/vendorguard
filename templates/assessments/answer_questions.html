@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %} {# Required for `get_item` if you're using it #}
+
+{% block content %}
+<div class="container mx-auto max-w-4xl px-4 py-6">
+  <h2 class="text-2xl font-semibold mb-6">Answer Questions</h2>
+
+  <form method="POST" x-data>
+    {% csrf_token %}
+
+    {% for question in questions %}
+    <div class="mb-6 border-b pb-4"
+     x-data="{ answer: '', showText: false }"
+     x-init="answer = $el.dataset.answer"
+     data-answer="'{{ answers|get_item:question.id|default:''|escapejs }}'">
+
+
+    <label class="font-semibold block mb-2 text-gray-800">
+        {{ forloop.counter }}. {{ question.text }}
+    </label>
+
+    {% if question.help_text %}
+    <p class="text-sm text-gray-500 mb-2">{{ question.help_text }}</p>
+    {% endif %}
+
+    <div class="space-y-2">
+        <label class="flex items-center gap-2">
+        <input type="radio" name="response_{{ question.id }}" value="yes" x-model="answer" />
+        Yes
+        </label>
+        <label class="flex items-center gap-2">
+        <input type="radio" name="response_{{ question.id }}" value="no" x-model="answer" />
+        No
+        </label>
+        <label class="flex items-center gap-2">
+        <input type="radio" name="response_{{ question.id }}" value="partial" x-model="answer" />
+        Partially
+        </label>
+        <label class="flex items-center gap-2">
+        <input type="radio" name="response_{{ question.id }}" value="n/a" x-model="answer" />
+        Not Applicable
+        </label>
+        <label class="flex items-center gap-2">
+        <input type="radio"
+            name="response_{{ question.id }}"
+            value="other"
+            x-model="answer"
+            x-on:change="showText = true" />
+
+        Other
+        </label>
+    </div>
+
+    <div x-show="answer === 'other'" class="mt-3">
+        <textarea name="response_{{ question.id }}" rows="3"
+                class="w-full border-gray-300 rounded px-3 py-2"
+                placeholder="Provide more detail...">{{ answers|get_item:question.id }}</textarea>
+    </div>
+    </div>
+    {% endfor %}
+
+
+    <div class="mt-6">
+      <button type="submit"
+              class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+        Submit Assessment
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -31,6 +31,7 @@
               <a href="{% url 'accounts:manage_team' %}" class="me-3 text-muted text-decoration-none">Team</a>
             {% endif %}
             <a href="{% url 'vendors:vendor_list' %}" class="me-3 text-muted text-decoration-none">Vendors</a>
+            <a class="nav-link" href="{% url 'vendors:offering_list' %}">Vendor Offerings</a>
             <a href="{% url 'dashboard:dashboard' %}" class="me-3 text-muted text-decoration-none">Dashboard</a>
 
             <a href="{% url 'accounts:profile' %}" class="me-3 text-muted text-decoration-none">Profile</a>
@@ -47,6 +48,14 @@
 
     <!-- MAIN CONTENT -->
     <main class="flex-grow-1">
+      {% if messages %}
+        <ul class="messages">
+          {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
       {% block content %}
 
       {% endblock %}

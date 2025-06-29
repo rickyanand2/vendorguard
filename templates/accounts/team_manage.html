@@ -8,6 +8,9 @@
     <h2 class="mb-4">Manage Your Team</h2>
 
     <h5>Invite New Member</h5>
+    <div class="alert alert-info" role="alert">
+      Only users with a <strong>@{{ org_domain }}</strong> email address can be invited to your team.
+    </div>
     <form method="post" class="mb-4">
       {% csrf_token %}
       <div class="row g-3">

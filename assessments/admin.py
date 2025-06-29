@@ -1,3 +1,5 @@
+# assessments/admin.py
+
 from django.contrib import admin
 from .models import Questionnaire, Question, Assessment, Answer
 
@@ -19,22 +21,27 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
+    # Safe accessor for vendor via VendorOffering
     def get_vendor(self, obj):
-        return obj.solution.vendor
+        return obj.VendorOffering.vendor
 
     get_vendor.short_description = "Vendor"
-    get_vendor.admin_order_field = "solution__vendor"
+    get_vendor.admin_order_field = "vendor_offering__vendor"
 
     list_display = (
         "get_vendor",
-        "solution",
+        "vendor_offering",
         "organization",
         "questionnaire",
         "status",
         "score",
         "created_at",
     )
-    search_fields = ("vendor__name", "organization__name", "questionnaire__name")
+    search_fields = (
+        "VendorOffering__vendor__name",
+        "organization__name",
+        "questionnaire__name",
+    )
     list_filter = ("status", "questionnaire", "created_at")
     ordering = ("-created_at",)
 
@@ -42,5 +49,5 @@ class AssessmentAdmin(admin.ModelAdmin):
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
     list_display = ("assessment", "question", "answer", "risk_impact")
-    search_fields = ("question__text", "assessment__vendor__name")
+    search_fields = ("question__text", "assessment__VendorOffering__vendor__name")
     list_filter = ("answer", "question__questionnaire")

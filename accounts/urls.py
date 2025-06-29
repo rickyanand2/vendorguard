@@ -1,22 +1,31 @@
 # accounts/urls.py
 from django.urls import path
 from . import views
+from .views import SoloRegisterView, TeamRegisterView
 from django.contrib.auth.views import LogoutView
+from accounts.views import (
+    UserLoginView,
+    UserLogoutView,
+    ProfileView,
+    ManageTeamView,
+    AcceptInviteView,
+    RemoveTeamMemberView,
+)
 
 app_name = "accounts"  # 👈 Important for namespacing
 
 urlpatterns = [
-    path("register/", views.register_solo, name="register_solo"),
-    path("register-team/", views.register_team, name="register_team"),
-    path("login/", views.user_login, name="login"),
-    path("logout/", views.logout_view, name="logout"),  # ✅ Use your custom logout view
-    path("profile/", views.profile, name="profile"),
-    path("manage-team/", views.manage_team, name="manage_team"),
-    # To be developed later - Invite and remove team members in Team/ Enterprise plans
-    path("invite/", views.invite_user_placeholder, name="invite_user"),
+    path("register/", SoloRegisterView.as_view(), name="register_solo"),
+    path("register/team/", TeamRegisterView.as_view(), name="register_team"),
+    path("login/", UserLoginView.as_view(), name="login"),
+    path("logout/", UserLogoutView.as_view(), name="logout"),
+    path("profile/", ProfileView.as_view(), name="profile"),
+    path("manage-team/", ManageTeamView.as_view(), name="manage_team"),
+    # Invite and remove team members in Team/ Enterprise plans
     path(
-        "remove-member/<int:user_id>/",
-        views.remove_team_member_placeholder,
+        "team/remove/<int:user_id>/",
+        views.RemoveTeamMemberView.as_view(),
         name="remove_team_member",
     ),
+    path("accept-invite/", AcceptInviteView.as_view(), name="accept_invite"),
 ]

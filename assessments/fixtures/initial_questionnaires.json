@@ -3,7 +3,7 @@
     "model": "assessments.questionnaire",
     "pk": 1,
     "fields": {
-      "title": "ISO 27001",
+      "name": "ISO 27001",
       "description": "Baseline assessment for ISO/IEC 27001 compliance."
     }
   },
@@ -11,7 +11,7 @@
     "model": "assessments.questionnaire",
     "pk": 2,
     "fields": {
-      "title": "SOC 2",
+      "name": "SOC 2",
       "description": "Baseline assessment for SOC 2 Type I & II readiness."
     }
   }

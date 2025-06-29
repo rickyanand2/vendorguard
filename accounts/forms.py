@@ -69,6 +69,22 @@ class TeamInviteForm(forms.Form):
 
 
 # ======================================================================================
+# Invite Form
+# ======================================================================================
+class AcceptInviteForm(forms.Form):
+    first_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=30, required=False)
+    password1 = forms.CharField(widget=forms.PasswordInput, label="Password")
+    password2 = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("password1") != cleaned_data.get("password2"):
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
+
+
+# ======================================================================================
 # 🔧 Admin Edit Form for CustomUser (visible in Django Admin)
 # ======================================================================================
 class CustomUserChangeForm(UserChangeForm):

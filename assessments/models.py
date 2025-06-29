@@ -1,6 +1,39 @@
+# assessments/models.py
+
 from django.db import models
-from vendors.models import Vendor, Solution
+from vendors.models import Vendor, VendorOffering, cert_artifact_path
 from accounts.models import Organization
+
+
+class Certification(models.Model):
+    CERT_TYPES = [
+        ("GDPR", "GDPR"),
+        ("ISO_27001", "ISO 27001"),
+        ("SOC2", "SOC 2 Type 2"),
+        ("PCI_DSS", "PCI DSS"),
+        ("IRAP", "IRAP"),
+        # Add more as needed
+    ]
+
+    vendor = models.ForeignKey(
+        Vendor, on_delete=models.CASCADE, related_name="certifications"
+    )
+    type = models.CharField(max_length=50, choices=CERT_TYPES)
+    issued_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    cert_number = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    artifact = models.FileField(
+        upload_to=cert_artifact_path,
+        null=True,
+        blank=True,
+        help_text="Optional: Upload certification file",
+    )
+    external_url = models.URLField(blank=True)
+
+    def __str__(self):
+        return f"{self.vendor.name} - {self.get_type_display()}"
 
 
 class Questionnaire(models.Model):
@@ -58,8 +91,8 @@ class Assessment(models.Model):
     ]
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    solution = models.ForeignKey(
-        Solution, on_delete=models.CASCADE, related_name="assessments"
+    vendor_offering = models.ForeignKey(
+        VendorOffering, on_delete=models.CASCADE, related_name="assessments"
     )
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
 
@@ -70,11 +103,10 @@ class Assessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.solution.name} Assessment ({self.status})"
+        return f"{self.vendor_offering.name} Assessment ({self.status})"
 
     class Meta:
         ordering = ["-created_at"]
-        unique_together = ("organization", "solution", "questionnaire")
 
 
 class Answer(models.Model):

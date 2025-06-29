@@ -1,21 +1,21 @@
 from django import forms
 from .models import Vendor, VendorTrustProfile
-from assessments.models import Solution
+from assessments.models import VendorOffering
 
 
-class SolutionForm(forms.ModelForm):
+class VendorOfferingForm(forms.ModelForm):
     class Meta:
-        model = Solution
-        fields = ["name", "description", "solution_type"]
+        model = VendorOffering
+        fields = ["name", "description", "offering_type"]
         widgets = {
-            "solution_type": forms.RadioSelect,  # 👈 This makes it a radio button
+            "offering_type": forms.RadioSelect,  # 👈 This makes it a radio button
         }
 
 
 class VendorForm(forms.ModelForm):
     class Meta:
         model = Vendor
-        fields = ["name", "contact_email", "website", "description"]
+        fields = ["name", "industry", "contact_email", "website", "description"]
         labels = {
             "name": "Vendor Name",
             "industry": "Industry",

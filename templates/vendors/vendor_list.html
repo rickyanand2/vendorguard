@@ -13,7 +13,7 @@
           <tr>
             <th scope="col">Vendor Name</th>
             <th scope="col">Trust Score</th>
-            <th scope="col">Solutions</th>
+            <th scope="col">Vendor Offerings</th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
@@ -21,7 +21,7 @@
           {% for vendor in vendors %}
             <tr>
               <td class="fw-semibold">{{ vendor.name }}</td>
-              <td>{{ vendor.trust_profile.trust_score }}</td>
+              <td>{{ vendor.trust_profile.trust_score|default:'-' }}</td>
               <td>
                 <ul class="list-unstyled mb-0">
                   {% for solution in vendor.solutions.all %}
@@ -36,16 +36,15 @@
                     </li>
                   {% empty %}
                     <li>
-                      <em>No solutions yet</em>
+                      <em>No vendor offerings yet</em>
                     </li>
                   {% endfor %}
                 </ul>
               </td>
               <td>
-                <div class="d-grid gap-2">
-                  <a href="{% url 'vendors:add_solution' vendor.id %}" class="btn btn-sm btn-outline-secondary">+ Add Solution</a>
-                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-sm btn-warning">Archive</a>
+                <div class="d-flex gap-2">
+                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-sm btn-outline-info"><i class="bi btn-outline-secondary"></i> Archive</a>
                 </div>
               </td>
             </tr>

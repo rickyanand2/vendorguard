@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     ### Other apps
     "widget_tweaks",
     ### Custom Apps
-    "accounts",  # Authentication and Authorization
+    "accounts.apps.AccountsConfig",  # Authentication and Authorization | Full path for super user creation
     "website",
     "dashboard",
     "vendors",
@@ -167,4 +167,5 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 ### Redirect override: to simplify your flow
 # LOGIN_REDIRECT_URL = "/dashboard/"
 # LOGOUT_REDIRECT_URL = "/home/"
-# LOGIN_URL = "/accounts/login/"  # this is correct and must NOT be the same as LOGOUT_REDIRECT_URL
+
+LOGIN_URL = "/accounts/login/"  # this is correct and must NOT be the same as LOGOUT_REDIRECT_URL

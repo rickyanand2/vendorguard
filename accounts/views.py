@@ -1,262 +1,246 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.http import Http404, HttpResponse, HttpResponseForbidden
-from datetime import timedelta
+# accounts/views.py
 import logging
+from django.http import HttpResponse
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_POST
+from django.utils.decorators import method_decorator
+from django.utils.crypto import get_random_string
+from django.urls import reverse, reverse_lazy
+from django.shortcuts import redirect
+from django.views.generic import TemplateView, FormView
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from accounts.forms import AcceptInviteForm
+from django.views.generic import TemplateView
 
-from .forms import CustomSoloUserCreationForm, CustomTeamsCreationForm, TeamInviteForm
-from .models import CustomUser, Organization, Membership, License
+from accounts.forms import (
+    CustomSoloUserCreationForm,
+    CustomTeamsCreationForm,
+    TeamInviteForm,
+)
+from accounts.models import CustomUser, Membership, License, Invite
+from services.accounts import RegistrationService
+from services.accounts import InviteService
+from services.permissions import OwnerRequiredMixin
+from services.memberships import get_org_members
+from accounts.forms import TeamInviteForm
 
 
 logger = logging.getLogger(__name__)  # Setup logging for error tracking
 
-# 🚫 Block public email domains for enterprise accounts
-BLOCKED_DOMAINS = {
-    "gmail.com",
-    "yahoo.com",
-    "outlook.com",
-    "hotmail.com",
-    "icloud.com",
-    "protonmail.com",
-}
 
-
-# Utility to extract domain from email
-def extract_email_domain(email):
-    return email.split("@")[1].lower()
-
-
-# -------------------------------------------------------
+# ====================================================================
 # 🔐 Solo User Registration (default public entry point)
-# -------------------------------------------------------
-def register_solo(request):
-    if request.method == "POST":
-        form = CustomSoloUserCreationForm(request.POST)
-        if form.is_valid():
-            try:
-                # 1. Shared solo org for all individual users
-                org, _ = Organization.objects.get_or_create(
-                    name="VendorGuard Solo",
-                    domain="solo.vendor",
-                    is_personal=True,
-                )
+# ====================================================================
+class SoloRegisterView(FormView):
+    form_class = CustomSoloUserCreationForm
+    template_name = "accounts/register_solo.html"
+    success_url = reverse_lazy("accounts:profile")
 
-                # 2. Trial license setup (14-day default)
-                License.objects.get_or_create(
-                    organization=org,
-                    defaults={
-                        "plan": "standard",
-                        "is_trial": True,
-                        "start_date": timezone.now().date(),
-                        "end_date": timezone.now().date() + timedelta(days=14),
-                    },
-                )
+    def form_valid(self, form):
+        try:
+            user = RegistrationService.register_solo_user(
+                email=form.cleaned_data["email"],
+                password=form.cleaned_data["password1"],
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                job_title=form.cleaned_data.get("job_title"),
+            )
+            login(self.request, user)
+            messages.success(self.request, "Welcome! Your 14-day trial has started.")
+            return super().form_valid(form)
 
-                # 3. Save user and assign membership
-                user = form.save()
-                Membership.objects.create(user=user, organization=org, role="owner")
+        except ValidationError as ve:
+            form.add_error(None, str(ve))
+            return self.form_invalid(form)
 
-                # 4. Log in and redirect
-                login(request, user)
-                messages.success(request, "Welcome! Your 14-day trial has started.")
-                return redirect("accounts:profile")
-
-            except Exception as e:
-                logger.exception("Solo registration failed")
-                form.add_error(None, f"An unexpected error occurred: {str(e)}")
-    else:
-        form = CustomSoloUserCreationForm()
-
-    return render(request, "accounts/register_solo.html", {"form": form})
+        except Exception as e:
+            logger.exception("Solo registration failed")
+            form.add_error(None, f"Unexpected error: {str(e)}")
+            return self.form_invalid(form)
 
 
-# -------------------------------------------------------
+# ====================================================================
+
+
+# ====================================================================
 # 🏢 Team/Enterprise Registration (via hidden CTA)
-# -------------------------------------------------------
-def register_team(request):
-    if request.method == "POST":
-        form = CustomTeamsCreationForm(request.POST)
-        if form.is_valid():
-            try:
-                org_name = form.cleaned_data["org_name"]
-                domain = form.cleaned_data["domain"].lower()
-                email_domain = extract_email_domain(form.cleaned_data["email"])
+# ====================================================================
+class TeamRegisterView(FormView):
+    form_class = CustomTeamsCreationForm
+    template_name = "accounts/register_team.html"
+    success_url = reverse_lazy("accounts:profile")
 
-                # Block known public domains
-                if domain in BLOCKED_DOMAINS or email_domain in BLOCKED_DOMAINS:
-                    form.add_error("email", "Public email providers are not allowed.")
-                    return render(
-                        request, "accounts/register_team.html", {"form": form}
-                    )
-
-                # Prevent duplicate orgs by domain
-                if Organization.objects.filter(domain=domain).exists():
-                    form.add_error("domain", "This domain is already in use.")
-                    return render(
-                        request, "accounts/register_team.html", {"form": form}
-                    )
-
-                # Create org and license
-                org = Organization.objects.create(
-                    name=org_name, domain=domain, is_personal=False
-                )
-                License.objects.create(
-                    organization=org,
-                    plan="teams",
-                    is_trial=True,
-                    start_date=timezone.now().date(),
-                    end_date=timezone.now().date() + timedelta(days=14),
-                )
-
-                # Register user as org owner
-                user = form.save(commit=False)
-                user.save()
-
-                # ✅ Make this user the owner
-                Membership.objects.create(user=user, organization=org, role="owner")
-
-                login(request, user)
-                messages.success(request, f"Team '{org_name}' created successfully!")
-                return redirect("accounts:profile")
-
-            except Exception as e:
-                logger.exception("Team registration failed")
-                form.add_error(None, f"Unexpected error during registration: {str(e)}")
-    else:
-        form = CustomTeamsCreationForm()
-
-    return render(request, "accounts/register_team.html", {"form": form})
+    def form_valid(self, form):
+        try:
+            user = RegistrationService.register_team_owner(
+                email=form.cleaned_data["email"],
+                password=form.cleaned_data["password1"],
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                org_name=form.cleaned_data["org_name"],
+                domain=form.cleaned_data["domain"].lower(),
+                job_title=form.cleaned_data.get("job_title"),
+            )
+            login(self.request, user)
+            messages.success(
+                self.request, f"Team '{form.cleaned_data['org_name']}' created!"
+            )
+            return super().form_valid(form)
+        except ValidationError as ve:
+            form.add_error(None, str(ve))
+            return self.form_invalid(form)
+        except Exception as e:
+            logger.exception("Team registration failed")
+            form.add_error(None, f"Unexpected error: {str(e)}")
+            return self.form_invalid(form)
 
 
-# --------------------------
-# 🔐 Login View
-# --------------------------
-def user_login(request):
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            login(request, form.get_user())
-            return redirect("dashboard:dashboard")
-    else:
-        form = AuthenticationForm()
-
-    return render(request, "accounts/login.html", {"form": form})
+# ====================================================================
 
 
-# --------------------------
-# 🔓 Logout View
-# --------------------------
-def logout_view(request):
-    logout(request)
-    return redirect("website:home")
+# ====================================================================
+# 🔓🔐 User Login and Logout Views
+# ====================================================================
+class UserLoginView(LoginView):
+    template_name = "accounts/login.html"
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        return reverse("accounts:profile")
 
 
-# --------------------------
+class UserLogoutView(LogoutView):
+    next_page = reverse_lazy("website:home")
+
+
+# ====================================================================
+
+
+# ====================================================================
 # 👤 Profile View
-# --------------------------
-@login_required
-def profile(request):
-    try:
-        membership = Membership.objects.select_related("organization").get(
-            user=request.user
-        )
-    except Membership.DoesNotExist:
-        raise Http404("Membership not found. Please contact support.")
+# ====================================================================
+class ProfileView(LoginRequiredMixin, TemplateView):
+    template_name = "accounts/profile.html"
 
-    license = License.objects.filter(organization=membership.organization).first()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        membership = getattr(self.request.user, "membership", None)
 
-    context = {
-        "user": request.user,
-        "org": membership.organization,
-        "license": license,
-        "is_owner": membership.role == "owner",
-    }
-    return render(request, "accounts/profile.html", context)
+        if membership is None:
+            context["organization"] = None
+            context["license"] = None
+            context["role"] = None
+        else:
+            context["organization"] = membership.organization
+            context["license"] = License.objects.filter(
+                organization=membership.organization
+            ).first()
+            context["role"] = membership.role
+
+        return context
 
 
-# -------------------------------------------------------
+# ====================================================================
+
+
+# ====================================================================
 # 🧑‍💼 Manage Team (only for Org Owners)
-# -------------------------------------------------------
-@login_required
-def manage_team(request):
-    membership = Membership.objects.filter(user=request.user).first()
-    if not membership or membership.role != "owner":
-        return HttpResponseForbidden("You do not have permission to access this page.")
-
-    org = membership.organization
-    members = Membership.objects.filter(organization=org).select_related("user")
-
-    if request.method == "POST":
-        form = TeamInviteForm(request.POST)
-        if form.is_valid():
-            try:
-                invite_email = form.cleaned_data["email"]
-                job_title = form.cleaned_data["job_title"]
-
-                new_user = CustomUser.objects.create_user(
-                    email=invite_email,
-                    password=CustomUser.objects.make_random_password(),
-                    job_title=job_title,
-                )
-                Membership.objects.create(
-                    user=new_user, organization=org, role="member"
-                )
-                messages.success(request, f"{invite_email} has been invited.")
-
-                return redirect("accounts:manage_team")
-
-            except Exception as e:
-                logger.exception("Error inviting user")
-                messages.error(request, f"Failed to invite: {str(e)}")
-
-    else:
-        form = TeamInviteForm()
-
-    return render(
-        request, "accounts/team_manage.html", {"form": form, "members": members}
-    )
+# ====================================================================
 
 
-# Placeholder / Functionality to be implementeds
-@login_required
-def invite_user_placeholder(request):
-    return render(
-        request,
-        "accounts/feature_placeholder.html",
-        {
-            "feature_name": "Invite Team Member",
-        },
-    )
+class ManageTeamView(OwnerRequiredMixin, FormView):
+    template_name = "accounts/team_manage.html"
+    form_class = TeamInviteForm
+    success_url = reverse_lazy("accounts:manage_team")
+
+    def get_context_data(self, **kwargs):
+        # Adds current organization members to the context.
+        context = super().get_context_data(**kwargs)
+        org = self.membership.organization
+        members = get_org_members(self.request.user)
+        context.update(
+            {
+                "members": members,
+                "org_domain": org.domain,
+            }
+        )
+        return context
+
+    def form_valid(self, form):
+        email = form.cleaned_data["email"]
+        job_title = form.cleaned_data["job_title"]
+        org = self.membership.organization
+
+        try:
+            invite = InviteService.send_invite(
+                email=email, job_title=job_title, org=org, request=self.request
+            )
+            messages.success(self.request, f"Invite sent to {email}.")
+            return super().form_valid(form)
+        except ValidationError as ve:
+            form.add_error(None, str(ve))
+            return self.form_invalid(form)
+        except Exception as e:
+            logger.exception("Error during invite")
+            form.add_error(None, f"Unexpected error: {str(e)}")
+            return self.form_invalid(form)
 
 
-# --------------------------
-# ❌ Remove Member (AJAX/HTMX) - Placeholder / Functionality to be implemented
-# --------------------------
-@login_required
-def remove_team_member_placeholder(request, user_id):
-    """
-    membership = Membership.objects.filter(user=request.user).first()
-    if not membership or membership.role != "owner":
-        return HttpResponseForbidden("Only owners can remove members.")
+# ====================================================================
 
-    user_to_remove = get_object_or_404(CustomUser, id=user_id)
-    target_membership = Membership.objects.filter(
-        user=user_to_remove, organization=membership.organization
-    ).first()
 
-    if target_membership:
-        user_to_remove.delete()
-        return HttpResponse("")  # HTMX partial update
-    return HttpResponseForbidden("Unauthorized.")
-    """
-    return render(
-        request,
-        "accounts/feature_placeholder.html",
-        {
-            "feature_name": f"Remove Team Member (User ID: {user_id})",
-        },
-    )
+# ====================================================================
+# Invite Users to Org
+# ====================================================================
+class AcceptInviteView(FormView):
+    template_name = "accounts/accept_invite.html"
+    form_class = AcceptInviteForm
+    success_url = reverse_lazy("accounts:profile")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.token = request.GET.get("token")
+        try:
+            self.invite = Invite.objects.get(token=self.token)
+            if not self.invite.is_valid:
+                raise ValueError("Invalid or expired.")
+        except Exception:
+            messages.error(request, "This invite link is invalid or expired.")
+            return redirect("website:home")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        try:
+            user = InviteService.accept_invite(
+                token=self.token,
+                password=form.cleaned_data["password1"],
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+            )
+            login(self.request, user)
+            messages.success(
+                self.request, f"Welcome to {self.invite.organization.name}!"
+            )
+            return super().form_valid(form)
+        except Exception as e:
+            logger.exception("[AcceptInvite] Error during invite acceptance")
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["invite"] = self.invite
+        return context
+
+
+@method_decorator(require_POST, name="dispatch")
+class RemoveTeamMemberView(TemplateView):
+    def post(self, request, *args, **kwargs):
+        logger.info("Team member removal requested (placeholder)")
+        return HttpResponse("Removed", status=200)
+
+
+# ====================================================================

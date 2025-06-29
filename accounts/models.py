@@ -1,3 +1,5 @@
+# accounts/models.py
+
 from django.db import models
 
 from django.contrib.auth.models import (
@@ -5,7 +7,9 @@ from django.contrib.auth.models import (
     PermissionsMixin,
     BaseUserManager,
 )
+
 from django.utils import timezone
+from datetime import timedelta
 
 
 # ======================================================================================
@@ -15,7 +19,9 @@ from django.utils import timezone
 class CustomUserManager(BaseUserManager):
 
     # Creates and saves a regular user with the given details.
-    def create_user(self, email, first_name, last_name, password=None, **extra_fields):
+    def create_user(
+        self, email, first_name="", last_name=None, password=None, **extra_fields
+    ):
         if not email:
             raise ValueError("Users must have a valid email address")
 
@@ -35,7 +41,7 @@ class CustomUserManager(BaseUserManager):
 
     # Creates and saves a superuser
     def create_superuser(
-        self, email, first_name, last_name, password=None, **extra_fields
+        self, email, first_name="", last_name=None, password=None, **extra_fields
     ):
         extra_fields.setdefault("is_admin", True)
         extra_fields.setdefault("is_superuser", True)
@@ -176,3 +182,20 @@ class License(models.Model):
 
     def __str__(self):
         return f"{self.organization.name} – {self.plan.capitalize()}"
+
+
+class Invite(models.Model):
+    email = models.EmailField()
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    is_expired = models.BooleanField(default=False)
+
+    @property
+    def is_valid(self):
+        return (
+            not self.is_expired
+            and self.accepted_at is None
+            and timezone.now() <= self.created_at + timedelta(days=7)
+        )

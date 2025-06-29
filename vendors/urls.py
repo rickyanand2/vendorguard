@@ -1,14 +1,19 @@
 # vendors/urls.py
 
 from django.urls import path
-from . import views
+from vendors import views
 
 app_name = "vendors"
 
 urlpatterns = [
-    path("", views.vendor_list, name="vendor_list"),
-    path("add/", views.vendor_add, name="vendor_add"),
-    path("<int:vendor_id>/edit/", views.vendor_edit, name="vendor_edit"),
-    path("<int:vendor_id>/archive/", views.vendor_archive, name="vendor_archive"),
-    path("solutions/add/<int:vendor_id>/", views.add_solution, name="add_solution"),
+    path("", views.VendorListView.as_view(), name="vendor_list"),
+    path("add/", views.VendorCreateView.as_view(), name="vendor_add"),
+    path("vendors/<int:pk>/", VendorDetailView.as_view(), name="vendor_detail"),
+    path("offerings/", VendorOfferingListView.as_view(), name="offering_list"),
+    path("<int:pk>/edit/", views.VendorUpdateView.as_view(), name="vendor_edit"),
+    path(
+        "<int:pk>/archive/",
+        views.VendorArchiveView.as_view(),
+        name="vendor_archive",
+    ),
 ]

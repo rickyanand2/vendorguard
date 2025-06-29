@@ -1,110 +1,121 @@
-from django.shortcuts import render, redirect
-from .models import Vendor
-from .forms import VendorForm, VendorTrustProfileForm, SolutionForm
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from accounts.models import Membership
-from .models import Vendor, VendorTrustProfile  # 🆕 import the trust profile model
+# vendors/views.py
+
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views import View
+from django.views.generic import ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+
+from vendors.models import Vendor, VendorTrustProfile
+from vendors.forms import VendorForm, VendorTrustProfileForm
+from services.assessments import calculate_aggregate_vendor_risk_score
+from services.vendors import calculate_trust_score
 
 
-@login_required
-def vendor_list(request):
-    org = Membership.objects.get(user=request.user).organization
-    vendors = Vendor.objects.filter(organization=org)
-    return render(request, "vendors/vendor_list.html", {"vendors": vendors})
+# ============================================================
+# ✅ ListView for Vendors (scoped to user's organization)
+# ============================================================
+class VendorListView(LoginRequiredMixin, ListView):
+    model = Vendor
+    template_name = "vendors/vendor_list.html"
+    context_object_name = "vendors"
+
+    def get_queryset(self):
+        return Vendor.objects.filter(
+            organization=self.request.user.organization, archived=False
+        ).order_by("-created_at")
 
 
-@login_required
-def vendor_add(request):
+# ============================================================
+# ✅ Add Vendor + Trust Profile (manual CBV for dual-form)
+# ============================================================
+class VendorCreateView(LoginRequiredMixin, View):
+    def get(self, request):
+        return self.render_forms(VendorForm(), VendorTrustProfileForm())
 
-    org = Membership.objects.get(user=request.user).organization
-    if request.method == "POST":
-        # Debug statement
-        print(">>> Received POST to vendor_create")
-
-        form = VendorForm(request.POST)
+    def post(self, request):
+        vendor_form = VendorForm(request.POST)
         trust_form = VendorTrustProfileForm(request.POST)
-        if form.is_valid() and trust_form.is_valid():
-            vendor = form.save(commit=False)
-            vendor.organization = org
+
+        if vendor_form.is_valid() and trust_form.is_valid():
+            vendor = vendor_form.save(commit=False)
+            vendor.organization = request.user.organization
             vendor.created_by = request.user
             vendor.save()
 
-            # ✅ Trust profile
-            trust_profile = trust_form.save(commit=False)
-            trust_profile.vendor = vendor
-            trust_profile.calculate_trust_score()
-            trust_profile.save()
+            trust = trust_form.save(commit=False)
+            trust.vendor = vendor
+            trust.trust_score = calculate_aggregate_vendor_risk_score(vendor=vendor)
+            trust.save()
 
             return redirect("vendors:vendor_list")
-    else:
-        print(">>> Vendor form errors:", form.errors)
-        print(">>> Trust form errors:", trust_form.errors)
-        form = VendorForm()
-        trust_form = VendorTrustProfileForm()
-    return render(
-        request,
-        "vendors/vendor_form.html",
-        {
-            "form": form,
-            "trust_form": trust_form,
-        },
-    )
+
+        return self.render_forms(vendor_form, trust_form)
+
+    def render_forms(self, vendor_form, trust_form):
+        return render(
+            self.request,
+            "vendors/vendor_form.html",
+            {
+                "form": vendor_form,
+                "trust_form": trust_form,
+            },
+        )
 
 
-@login_required
-def vendor_edit(request, vendor_id):
-    vendor = get_object_or_404(
-        Vendor, id=vendor_id, organization=request.user.organization
-    )
+# ============================================================
+# ✅ Edit Vendor + Trust Profile
+# ============================================================
+class VendorUpdateView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        vendor = get_object_or_404(
+            Vendor, pk=pk, organization=request.user.organization
+        )
+        trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
+        return self.render_forms(
+            VendorForm(instance=vendor),
+            VendorTrustProfileForm(instance=trust_profile),
+        )
 
-    # Get or create trust profile
-    trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
+    def post(self, request, pk):
+        vendor = get_object_or_404(
+            Vendor, pk=pk, organization=request.user.organization
+        )
+        trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
 
-    if request.method == "POST":
         vendor_form = VendorForm(request.POST, instance=vendor)
         trust_form = VendorTrustProfileForm(request.POST, instance=trust_profile)
+
         if vendor_form.is_valid() and trust_form.is_valid():
             vendor_form.save()
             trust = trust_form.save(commit=False)
-            trust.calculate_trust_score()  # 🔁 optional: recalc on update
+            trust.trust_score = calculate_trust_score(trust)
             trust.save()
             return redirect("vendors:vendor_list")
-    else:
-        vendor_form = VendorForm(instance=vendor)
-        trust_form = VendorTrustProfileForm(instance=trust_profile)
 
-    return render(
-        request,
-        "vendors/vendor_form.html",
-        {"form": vendor_form, "trust_form": trust_form},
-    )
+        return self.render_forms(vendor_form, trust_form)
 
-
-@login_required
-def vendor_archive(request, vendor_id):
-    vendor = get_object_or_404(
-        Vendor, id=vendor_id, organization=request.user.organization
-    )
-    vendor.archived = True
-    vendor.save()
-    return redirect("vendors:vendor_list")
+    def render_forms(self, vendor_form, trust_form):
+        return render(
+            self.request,
+            "vendors/vendor_form.html",
+            {
+                "form": vendor_form,
+                "trust_form": trust_form,
+                "edit_mode": True,
+            },
+        )
 
 
-@login_required
-def add_solution(request, vendor_id):
-    vendor = get_object_or_404(
-        Vendor, id=vendor_id, organization=request.user.organization
-    )
-    if request.method == "POST":
-        form = SolutionForm(request.POST)
-        if form.is_valid():
-            solution = form.save(commit=False)
-            solution.vendor = vendor
-            solution.save()
-            return redirect("vendors:vendor_list")
-    else:
-        form = SolutionForm()
-    return render(
-        request, "vendors/solution_form.html", {"form": form, "vendor": vendor}
-    )
+# ============================================================
+# ✅ Soft-delete Vendor (Archive)
+# ============================================================
+class VendorArchiveView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        vendor = get_object_or_404(
+            Vendor, pk=pk, organization=request.user.organization
+        )
+        vendor.archived = True
+        vendor.save()
+        messages.success(request, f"Vendor '{vendor.name}' archived.")
+        return redirect("vendors:vendor_list")

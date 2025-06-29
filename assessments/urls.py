@@ -6,6 +6,8 @@ from .views import submit_for_review  # For workflow
 app_name = "assessments"
 
 urlpatterns = [
+    # Offerings
+    path("offerings/", SolutionListView.as_view(), name="solution_list"),
     path("start/<int:solution_id>/", views.start_assessment, name="start_assessment"),
     path(
         "<int:assessment_id>/questions/",

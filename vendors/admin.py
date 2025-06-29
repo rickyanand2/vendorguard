@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Vendor, VendorTrustProfile, Certification, Solution
+from .models import Vendor, VendorTrustProfile, VendorOffering
+from assessments.models import Certification
 
 
 class CertificationInline(admin.StackedInline):
@@ -59,9 +60,9 @@ class VendorAdmin(admin.ModelAdmin):
             VendorTrustProfile.objects.create(vendor=obj)
 
 
-@admin.register(Solution)
-class SolutionAdmin(admin.ModelAdmin):
-    list_display = ("name", "vendor", "solution_type")
+@admin.register(VendorOffering)
+class VendorOfferingAdmin(admin.ModelAdmin):
+    list_display = ("name", "vendor", "offering_type")
     search_fields = ("name",)
 
 

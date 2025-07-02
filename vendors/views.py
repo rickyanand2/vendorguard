@@ -2,42 +2,44 @@
 
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views import View
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 
-from vendors.models import Vendor, VendorTrustProfile
-from vendors.forms import VendorForm, VendorTrustProfileForm
+from vendors.models import Vendor, VendorTrustProfile, VendorOffering
+from vendors.forms import VendorForm, VendorTrustProfileForm, VendorOfferingForm
 from services.assessments import calculate_aggregate_vendor_risk_score
 from services.vendors import calculate_trust_score
 
 
 # ============================================================
-# ✅ ListView for Vendors (scoped to user's organization)
+# ✅ All Vendor CRUD Views
 # ============================================================
-class VendorListView(LoginRequiredMixin, ListView):
-    model = Vendor
-    template_name = "vendors/vendor_list.html"
-    context_object_name = "vendors"
+class VendorViews(LoginRequiredMixin, View):
+    # 🔹 Render vendor list scoped to organization
+    @staticmethod
+    def list(request):
+        vendors = (
+            Vendor.objects.prefetch_related("offerings")
+            .filter(
+                organization=request.user.organization,
+                archived=False,
+            )
+            .order_by("-created_at")
+        )
+        return render(request, "vendors/vendor_list.html", {"vendors": vendors})
 
-    def get_queryset(self):
-        return Vendor.objects.filter(
-            organization=self.request.user.organization, archived=False
-        ).order_by("-created_at")
+    # 🔹 Show create vendor form (GET) or process submission (POST)
+    @staticmethod
+    def create(request):
+        vendor_form = VendorForm(request.POST or None)
+        trust_form = VendorTrustProfileForm(request.POST or None)
 
-
-# ============================================================
-# ✅ Add Vendor + Trust Profile (manual CBV for dual-form)
-# ============================================================
-class VendorCreateView(LoginRequiredMixin, View):
-    def get(self, request):
-        return self.render_forms(VendorForm(), VendorTrustProfileForm())
-
-    def post(self, request):
-        vendor_form = VendorForm(request.POST)
-        trust_form = VendorTrustProfileForm(request.POST)
-
-        if vendor_form.is_valid() and trust_form.is_valid():
+        if (
+            request.method == "POST"
+            and vendor_form.is_valid()
+            and trust_form.is_valid()
+        ):
             vendor = vendor_form.save(commit=False)
             vendor.organization = request.user.organization
             vendor.created_by = request.user
@@ -48,70 +50,61 @@ class VendorCreateView(LoginRequiredMixin, View):
             trust.trust_score = calculate_aggregate_vendor_risk_score(vendor=vendor)
             trust.save()
 
+            messages.success(request, "Vendor created successfully.")
             return redirect("vendors:vendor_list")
 
-        return self.render_forms(vendor_form, trust_form)
+        return VendorViews._render_forms(request, vendor_form, trust_form)
 
-    def render_forms(self, vendor_form, trust_form):
-        return render(
-            self.request,
-            "vendors/vendor_form.html",
-            {
-                "form": vendor_form,
-                "trust_form": trust_form,
-            },
-        )
-
-
-# ============================================================
-# ✅ Edit Vendor + Trust Profile
-# ============================================================
-class VendorUpdateView(LoginRequiredMixin, View):
-    def get(self, request, pk):
-        vendor = get_object_or_404(
-            Vendor, pk=pk, organization=request.user.organization
-        )
-        trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
-        return self.render_forms(
-            VendorForm(instance=vendor),
-            VendorTrustProfileForm(instance=trust_profile),
-        )
-
-    def post(self, request, pk):
+    # 🔹 Show edit vendor form (GET) or process update (POST)
+    @staticmethod
+    def update(request, pk):
         vendor = get_object_or_404(
             Vendor, pk=pk, organization=request.user.organization
         )
         trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
 
-        vendor_form = VendorForm(request.POST, instance=vendor)
-        trust_form = VendorTrustProfileForm(request.POST, instance=trust_profile)
+        vendor_form = VendorForm(request.POST or None, instance=vendor)
+        trust_form = VendorTrustProfileForm(
+            request.POST or None, instance=trust_profile
+        )
 
-        if vendor_form.is_valid() and trust_form.is_valid():
+        if (
+            request.method == "POST"
+            and vendor_form.is_valid()
+            and trust_form.is_valid()
+        ):
             vendor_form.save()
             trust = trust_form.save(commit=False)
             trust.trust_score = calculate_trust_score(trust)
             trust.save()
+
+            messages.success(request, "Vendor updated successfully.")
             return redirect("vendors:vendor_list")
 
-        return self.render_forms(vendor_form, trust_form)
+        return VendorViews._render_forms(
+            request, vendor_form, trust_form, edit_mode=True
+        )
 
-    def render_forms(self, vendor_form, trust_form):
+    # 🔹 Render vendor detail page
+    @staticmethod
+    def detail(request, pk):
+        vendor = get_object_or_404(
+            Vendor, pk=pk, organization=request.user.organization, archived=False
+        )
+        offerings = vendor.offerings.filter(archived=False)
+
         return render(
-            self.request,
-            "vendors/vendor_form.html",
+            request,
+            "vendors/vendor_detail.html",
             {
-                "form": vendor_form,
-                "trust_form": trust_form,
-                "edit_mode": True,
+                "vendor": vendor,
+                "offerings": offerings,
             },
         )
 
-
-# ============================================================
-# ✅ Soft-delete Vendor (Archive)
-# ============================================================
-class VendorArchiveView(LoginRequiredMixin, View):
-    def post(self, request, pk):
+    # 🔹 Soft-delete (archive) vendor
+    @staticmethod
+    def archive(request, pk):
         vendor = get_object_or_404(
             Vendor, pk=pk, organization=request.user.organization
         )
@@ -119,3 +112,118 @@ class VendorArchiveView(LoginRequiredMixin, View):
         vendor.save()
         messages.success(request, f"Vendor '{vendor.name}' archived.")
         return redirect("vendors:vendor_list")
+
+    # 🔸 Internal DRY method for rendering dual form
+    @staticmethod
+    def _render_forms(request, vendor_form, trust_form, edit_mode=False):
+        return render(
+            request,
+            "vendors/vendor_form.html",
+            {
+                "form": vendor_form,
+                "trust_form": trust_form,
+                "edit_mode": edit_mode,
+            },
+        )
+
+
+# ============================================================
+# ✅ All Vendor Offering CRUD Views Grouped in One Class
+# ============================================================
+class VendorOfferingViews(LoginRequiredMixin, View):
+    """
+    Grouped offering logic:
+    - list: All offerings under this user's organization
+    - create: Add offering for a specific vendor
+    - update: Edit a vendor offering
+    - detail: View offering
+    - archive: Soft-delete offering
+    """
+
+    # 🔹 List all offerings under user's org (optionally grouped)
+    @staticmethod
+    def list(request):
+        offerings = (
+            VendorOffering.objects.filter(
+                vendor__organization=request.user.organization,
+                archived=False,
+            )
+            .select_related("vendor")
+            .order_by("-created_at")
+        )
+        return render(request, "vendors/offering_list.html", {"offerings": offerings})
+
+    # 🔹 Create an offering for a given vendor
+    @staticmethod
+    def create(request, vendor_id):
+        vendor = get_object_or_404(
+            Vendor, pk=vendor_id, organization=request.user.organization
+        )
+        form = VendorOfferingForm(request.POST or None)
+
+        if request.method == "POST" and form.is_valid():
+            offering = form.save(commit=False)
+            offering.vendor = vendor
+            offering.created_by = request.user
+            offering.save()
+            messages.success(request, f"Offering added to Vendor: {vendor.name}.")
+            return redirect("vendors:offering_list")
+
+        return VendorOfferingViews._render_form(request, form, vendor=vendor)
+
+    # 🔹 Edit existing offering
+    @staticmethod
+    def update(request, pk):
+        offering = get_object_or_404(
+            VendorOffering,
+            pk=pk,
+            vendor__organization=request.user.organization,
+        )
+        form = VendorOfferingForm(request.POST or None, instance=offering)
+
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(
+                request, f"Offering updated for Vendor: {offering.vendor.name}."
+            )
+            return redirect("vendors:offering_list")
+
+        return VendorOfferingViews._render_form(
+            request, form, vendor=offering.vendor, edit_mode=True
+        )
+
+    # 🔹 View details of an offering
+    @staticmethod
+    def detail(request, pk):
+        offering = get_object_or_404(
+            VendorOffering,
+            pk=pk,
+            vendor__organization=request.user.organization,
+        )
+        return render(request, "vendors/offering_detail.html", {"offering": offering})
+
+    # 🔹 Archive (soft-delete) offering
+    @staticmethod
+    def archive(request, pk):
+        offering = get_object_or_404(
+            VendorOffering,
+            pk=pk,
+            vendor__organization=request.user.organization,
+        )
+        offering.archived = True
+        offering.save()
+        messages.success(request, f"Offering '{offering.name}' archived.")
+        return redirect("vendors:vendor_detail", pk=offering.vendor.id)
+
+    # 🔸 Internal DRY method for rendering form
+    @staticmethod
+    def _render_form(request, form, vendor, edit_mode=False):
+        return render(
+            request,
+            "vendors/offering_form.html",
+            {
+                "form": form,
+                "vendor": vendor,
+                "edit_mode": edit_mode,
+            },
+        )

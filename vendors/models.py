@@ -5,6 +5,7 @@ from accounts.models import Organization
 from vendors.constants import OfferingType
 import os
 from uuid import uuid4
+from common.models import TimeStampedModel
 
 
 # Handles per-tenant + per-vendor upload structure for certification artifacts
@@ -15,7 +16,7 @@ def cert_artifact_path(instance, filename):
     return os.path.join("certifications", str(instance.vendor.id), filename)
 
 
-class Vendor(models.Model):
+class Vendor(TimeStampedModel):
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="vendors"
     )
@@ -56,11 +57,12 @@ class VendorTrustProfile(models.Model):
 
 
 # Offering by a vendor.
-class VendorOffering(models.Model):
+class VendorOffering(TimeStampedModel):
 
     vendor = models.ForeignKey(
         Vendor, on_delete=models.CASCADE, related_name="offerings"
     )
+    archived = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     offering_type = models.CharField(

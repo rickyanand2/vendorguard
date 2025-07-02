@@ -45,12 +45,12 @@ INSTALLED_APPS = [
     "widget_tweaks",
     ### Custom Apps
     "accounts.apps.AccountsConfig",  # Authentication and Authorization | Full path for super user creation
-    "website",
+    "website",  # Also has template tags
     "dashboard",
     "vendors",
     "assessments",  # Third party risk assessments
-    "utils",  # Form tags and other shared resources
     "workflow",
+    "common",  # For Audit Log
 ]
 
 MIDDLEWARE = [

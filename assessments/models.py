@@ -3,22 +3,24 @@
 from django.db import models
 from vendors.models import Vendor, VendorOffering, cert_artifact_path
 from accounts.models import Organization
+from common.models import TimeStampedModel
+from .constants import (
+    CERTIFICATION_TYPES,
+    RESPONSE_TYPES,
+    ANSWER_CHOICES,
+    ASSESSMENT_STATUSES,
+    QUESTION_CATEGORIES,
+    evidence_upload_path,
+)
 
 
-class Certification(models.Model):
-    CERT_TYPES = [
-        ("GDPR", "GDPR"),
-        ("ISO_27001", "ISO 27001"),
-        ("SOC2", "SOC 2 Type 2"),
-        ("PCI_DSS", "PCI DSS"),
-        ("IRAP", "IRAP"),
-        # Add more as needed
-    ]
+class Certification(TimeStampedModel):
 
     vendor = models.ForeignKey(
         Vendor, on_delete=models.CASCADE, related_name="certifications"
     )
-    type = models.CharField(max_length=50, choices=CERT_TYPES)
+    type = models.CharField(max_length=50, choices=CERTIFICATION_TYPES)
+    is_valid = models.BooleanField(default=False)
     issued_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
     cert_number = models.CharField(max_length=255, blank=True)
@@ -36,7 +38,7 @@ class Certification(models.Model):
         return f"{self.vendor.name} - {self.get_type_display()}"
 
 
-class Questionnaire(models.Model):
+class Questionnaire(TimeStampedModel):
     """
     Represents a reusable questionnaire template.
     Each questionnaire contains a set of security/risk questions
@@ -44,6 +46,7 @@ class Questionnaire(models.Model):
     """
 
     name = models.CharField(max_length=255)
+    response_type = models.CharField(max_length=20, choices=RESPONSE_TYPES)
     description = models.TextField(blank=True)
 
     def __str__(self):
@@ -56,17 +59,14 @@ class Question(models.Model):
     Includes optional help text and a weight to indicate importance.
     """
 
-    RESPONSE_TYPES = [
-        ("choice", "Choice (Yes/No/etc.)"),
-        ("text", "Text Only"),
-        ("choice+text", "Choice with Explanation"),
-    ]
-    response_type = models.CharField(
-        max_length=20,
-        choices=RESPONSE_TYPES,
-        default="choice",
-        help_text="Controls how the question is displayed and answered.",
+    category = models.CharField(
+        max_length=50,
+        choices=QUESTION_CATEGORIES,
+        default="data_protection",
+        help_text="Security domain or category this question belongs to.",
     )
+
+    response_type = models.CharField(max_length=20, choices=RESPONSE_TYPES)
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
     text = models.TextField()
     help_text = models.CharField(max_length=255, blank=True)
@@ -78,17 +78,11 @@ class Question(models.Model):
         return self.text
 
 
-class Assessment(models.Model):
+class Assessment(TimeStampedModel):
     """
     An instance of a questionnaire being used to assess a specific vendor
     by a specific organization. Tracks status and aggregate score.
     """
-
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("submitted", "Submitted"),
-        ("reviewed", "Reviewed"),
-    ]
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     vendor_offering = models.ForeignKey(
@@ -96,7 +90,9 @@ class Assessment(models.Model):
     )
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    status = models.CharField(
+        max_length=20, choices=ASSESSMENT_STATUSES, default="draft"
+    )
     score = models.FloatField(
         default=0.0, help_text="Overall score after assessment completion"
     )
@@ -109,18 +105,11 @@ class Assessment(models.Model):
         ordering = ["-created_at"]
 
 
-class Answer(models.Model):
+class Answer(TimeStampedModel):
     """
     Stores the answer to a specific question in the context of a specific assessment.
     Supports structured responses and optional comments.
     """
-
-    ANSWER_CHOICES = [
-        ("yes", "Yes"),
-        ("no", "No"),
-        ("partial", "Partially"),
-        ("n/a", "Not Applicable"),
-    ]
 
     assessment = models.ForeignKey(
         Assessment, on_delete=models.CASCADE, related_name="answers"
@@ -131,6 +120,7 @@ class Answer(models.Model):
     comments = models.TextField(
         blank=True, help_text="Optional justification or context"
     )
+    evidence = models.FileField(upload_to=evidence_upload_path, null=True, blank=True)
     risk_impact = models.FloatField(
         default=0.0, help_text="Custom risk value (0.0–1.0 scale)"
     )
@@ -139,4 +129,4 @@ class Answer(models.Model):
         unique_together = ("assessment", "question")
 
     def __str__(self):
-        return f"Answer: {self.question.text[:40]} – {self.answer}"
+        return f"{self.assessment.id} - {self.question.text[:30]}: {self.answer}"

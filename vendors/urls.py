@@ -2,18 +2,27 @@
 
 from django.urls import path
 from vendors import views
+from vendors.views import VendorViews, VendorOfferingViews
 
 app_name = "vendors"
 
 urlpatterns = [
-    path("", views.VendorListView.as_view(), name="vendor_list"),
-    path("add/", views.VendorCreateView.as_view(), name="vendor_add"),
-    path("vendors/<int:pk>/", VendorDetailView.as_view(), name="vendor_detail"),
-    path("offerings/", VendorOfferingListView.as_view(), name="offering_list"),
-    path("<int:pk>/edit/", views.VendorUpdateView.as_view(), name="vendor_edit"),
+    path("", VendorViews.list, name="vendor_list"),
+    path("add/", VendorViews.create, name="vendor_add"),
+    path("<int:pk>/", VendorViews.detail, name="vendor_detail"),
+    path("<int:pk>/edit/", VendorViews.update, name="vendor_edit"),
+    path("<int:pk>/archive/", VendorViews.archive, name="vendor_archive"),
+    path("offerings/", VendorOfferingViews.list, name="offering_list"),
     path(
-        "<int:pk>/archive/",
-        views.VendorArchiveView.as_view(),
-        name="vendor_archive",
+        "vendors/<int:vendor_id>/offerings/add/",
+        VendorOfferingViews.create,
+        name="offering_add",
+    ),
+    path("offerings/<int:pk>/edit/", VendorOfferingViews.update, name="offering_edit"),
+    path("offerings/<int:pk>/", VendorOfferingViews.detail, name="offering_detail"),
+    path(
+        "offerings/<int:pk>/archive/",
+        VendorOfferingViews.archive,
+        name="offering_archive",
     ),
 ]

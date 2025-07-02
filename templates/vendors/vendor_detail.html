@@ -1,2 +1,68 @@
-This is to be vendor Detail view
-<a href="{% url 'vendors:add_offering' vendor.pk %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Offering</a>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>
+        <i class="bi bi-building"></i>
+        Vendor Details – {{ vendor.name }}
+      </h4>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <p>
+          <strong>Name</strong><br />{{ vendor.name }}
+        </p>
+        <p>
+          <strong>Industry</strong><br />{{ vendor.industry }}
+        </p>
+        <p>
+          <strong>Location</strong><br />{{ vendor.location }}
+        </p>
+        <p>
+          <strong>Website</strong><br />
+          {% if vendor.website %}
+            <a href="{{ vendor.website }}" target="_blank">{{ vendor.website }}</a>
+          {% else %}
+            <span class="text-muted">Not provided</span>
+          {% endif %}
+        </p>
+        <p>
+          <strong>Created</strong><br />{{ vendor.created_at|date:'M d, Y' }}
+        </p>
+      </div>
+    
+
+    <!-- ACTION BUTTONS -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit Vendor</a>
+
+      <a href="{% url 'vendors:offering_add' vendor.id %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Offering</a>
+
+      <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-outline-danger"><i class="bi bi-archive"></i> Archive Vendor</a>
+    </div>
+
+    <!-- OFFERINGS SECTION -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-light">
+        <i class="bi bi-box-seam"></i> Offerings
+      </div>
+      <div class="card-body">
+        {% if offerings %}
+          {% for offering in offerings %}
+            <div class="border-bottom py-2">
+              <h6 class="mb-0 fw-semibold">{{ offering.name }}</h6>
+              <div class="text-muted small">{{ offering.description|default:'No description' }}</div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">No offerings yet. Use the “Add Offering” button above to create one.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <a href="{% url 'vendors:vendor_list' %}" class="btn btn-secondary ms-auto">← Back to Vendor List</a>
+{% endblock %}
+</div>

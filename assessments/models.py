@@ -5,11 +5,11 @@ from vendors.models import Vendor, VendorOffering, cert_artifact_path
 from accounts.models import Organization
 from common.models import TimeStampedModel
 from .constants import (
-    CERTIFICATION_TYPES,
-    RESPONSE_TYPES,
-    ANSWER_CHOICES,
-    ASSESSMENT_STATUSES,
-    QUESTION_CATEGORIES,
+    CertificationTypes,
+    ResponseTypes,
+    AnswerChoices,
+    AssessmentStatuses,
+    QuestionCategories,
     evidence_upload_path,
 )
 
@@ -19,7 +19,7 @@ class Certification(TimeStampedModel):
     vendor = models.ForeignKey(
         Vendor, on_delete=models.CASCADE, related_name="certifications"
     )
-    type = models.CharField(max_length=50, choices=CERTIFICATION_TYPES)
+    type = models.CharField(max_length=50, choices=CertificationTypes.choices)
     is_valid = models.BooleanField(default=False)
     issued_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
@@ -46,14 +46,14 @@ class Questionnaire(TimeStampedModel):
     """
 
     name = models.CharField(max_length=255)
-    response_type = models.CharField(max_length=20, choices=RESPONSE_TYPES)
+
     description = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
 
 
-class Question(models.Model):
+class Question(TimeStampedModel):
     """
     Represents a single question that belongs to a questionnaire.
     Includes optional help text and a weight to indicate importance.
@@ -61,13 +61,14 @@ class Question(models.Model):
 
     category = models.CharField(
         max_length=50,
-        choices=QUESTION_CATEGORIES,
-        default="data_protection",
-        help_text="Security domain or category this question belongs to.",
+        choices=QuestionCategories.choices,
+        default=QuestionCategories.DATA_PROTECTION,
     )
 
-    response_type = models.CharField(max_length=20, choices=RESPONSE_TYPES)
-    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
+    response_type = models.CharField(max_length=20, choices=ResponseTypes.choices)
+    questionnaire = models.ForeignKey(
+        Questionnaire, on_delete=models.CASCADE, related_name="questions"
+    )
     text = models.TextField()
     help_text = models.CharField(max_length=255, blank=True)
     weight = models.IntegerField(
@@ -75,7 +76,7 @@ class Question(models.Model):
     )
 
     def __str__(self):
-        return self.text
+        return f"Q: {self.text[:50]}"
 
 
 class Assessment(TimeStampedModel):
@@ -91,12 +92,13 @@ class Assessment(TimeStampedModel):
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
 
     status = models.CharField(
-        max_length=20, choices=ASSESSMENT_STATUSES, default="draft"
+        max_length=20,
+        choices=AssessmentStatuses.choices,
+        default=AssessmentStatuses.DRAFT,
     )
     score = models.FloatField(
         default=0.0, help_text="Overall score after assessment completion"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.vendor_offering.name} Assessment ({self.status})"
@@ -116,7 +118,7 @@ class Answer(TimeStampedModel):
     )
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     response = models.TextField()  # 👈 THIS MUST EXIST
-    answer = models.CharField(max_length=10, choices=ANSWER_CHOICES)
+    answer = models.CharField(max_length=10, choices=AnswerChoices.choices)
     comments = models.TextField(
         blank=True, help_text="Optional justification or context"
     )

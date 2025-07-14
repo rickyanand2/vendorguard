@@ -2,6 +2,19 @@
 {% load static %}
 {% load custom_filters %} {# Required for `get_item` if you're using it #}
 
+
+{# {% extends "base.html" %}
+{% block content %}
+<h2>Update Answer</h2>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-success">Save</button>
+</form>
+{% endblock %}
+#}
+
+
 {% block content %}
 <div class="container mx-auto max-w-4xl px-4 py-6">
   <h2 class="text-2xl font-semibold mb-6">Answer Questions</h2>

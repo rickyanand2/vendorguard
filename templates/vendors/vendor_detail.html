@@ -35,15 +35,6 @@
       </div>
     
 
-    <!-- ACTION BUTTONS -->
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit Vendor</a>
-
-      <a href="{% url 'vendors:offering_add' vendor.id %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Offering</a>
-
-      <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-outline-danger"><i class="bi bi-archive"></i> Archive Vendor</a>
-    </div>
-
     <!-- OFFERINGS SECTION -->
     <div class="card border-0 shadow-sm">
       <div class="card-header bg-light">
@@ -58,7 +49,7 @@
             </div>
           {% endfor %}
         {% else %}
-          <p class="text-muted mb-0">No offerings yet. Use the “Add Offering” button above to create one.</p>
+          <p class="text-muted mb-0">No offerings provided. Use the “Add Offering” button on Vendor's list page to create one.</p>
         {% endif %}
       </div>
     </div>

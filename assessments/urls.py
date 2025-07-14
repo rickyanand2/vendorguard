@@ -1,21 +1,20 @@
 # assessments/urls.py
+
 from django.urls import path
-from . import views
-from .views import submit_for_review  # For workflow
+from .views import (
+    AssessmentListView,
+    AssessmentCreateView,
+    AssessmentDetailView,
+    SubmitAssessmentForReviewView,
+    AnswerQuestionnaireView,
+)
 
 app_name = "assessments"
 
 urlpatterns = [
-    # Offerings
-    # path("offerings/", SolutionListView.as_view(), name="solution_list"),
-    path("start/<int:solution_id>/", views.start_assessment, name="start_assessment"),
-    path(
-        "<int:assessment_id>/questions/",
-        views.answer_questions,
-        name="answer_questions",
-    ),
-    path("<int:assessment_id>/", views.assessment_detail, name="assessment_detail"),
-    path(
-        "<int:assessment_id>/submit/", submit_for_review, name="submit_for_review"
-    ),  # For workflow
+    path("", AssessmentListView.as_view(), name="list"),
+    path("create/", AssessmentCreateView.as_view(), name="create"),
+    path("<int:pk>/", AssessmentDetailView.as_view(), name="detail"),
+    path("<int:pk>/submit/", SubmitAssessmentForReviewView.as_view(), name="submit"),
+    path("<int:pk>/answer/", AnswerQuestionnaireView.as_view(), name="answer"),
 ]

@@ -35,7 +35,7 @@
                 <td>{{ offering.created_at|date:'M d, Y' }}</td>
                 <td>
                   <a href="{% url 'vendors:offering_detail' offering.id %}" class="btn btn-sm btn-outline-primary">View</a>
-                  <a href="{% url 'vendors:offering_edit' offering.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                  <a href="{% url 'vendors:offering_edit' offering.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit</a>
                   <!-- Archive or Delete can be added with POST/confirmation later -->
                 </td>
               </tr>

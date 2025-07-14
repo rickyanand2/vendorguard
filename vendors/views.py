@@ -8,8 +8,8 @@ from django.contrib import messages
 
 from vendors.models import Vendor, VendorTrustProfile, VendorOffering
 from vendors.forms import VendorForm, VendorTrustProfileForm, VendorOfferingForm
-from services.assessments import calculate_aggregate_vendor_risk_score
-from services.vendors import calculate_trust_score
+
+from services.vendors import calculate_vendor_trust_score
 
 
 # ============================================================
@@ -47,7 +47,7 @@ class VendorViews(LoginRequiredMixin, View):
 
             trust = trust_form.save(commit=False)
             trust.vendor = vendor
-            trust.trust_score = calculate_aggregate_vendor_risk_score(vendor=vendor)
+            trust.trust_score = calculate_vendor_trust_score(vendor=vendor)
             trust.save()
 
             messages.success(request, "Vendor created successfully.")
@@ -75,7 +75,7 @@ class VendorViews(LoginRequiredMixin, View):
         ):
             vendor_form.save()
             trust = trust_form.save(commit=False)
-            trust.trust_score = calculate_trust_score(trust)
+            trust.trust_score = calculate_vendor_trust_score(trust)
             trust.save()
 
             messages.success(request, "Vendor updated successfully.")

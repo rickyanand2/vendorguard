@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>My Assessments</h2>
+  <ul>
+    {% for a in assessments %}
+      <li>
+        <a href="{% url 'assessments:detail' a.pk %}">{{ a.vendor_offering }} – {{ a.status }} – {{ a.score }}</a>
+      </li>
+    {% empty %}
+      <li>No assessments found.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

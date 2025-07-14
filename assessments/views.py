@@ -1,148 +1,95 @@
 # assessments/views.py
+
+from django.views import View
+from django.views.generic import ListView, CreateView, DetailView
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.http import HttpResponseBadRequest
-
-from assessments.models import Assessment, Answer, Question
-from workflow.models import WorkflowObject, Workflow
-
-
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from .models import Assessment
+from .forms import AssessmentForm  # Create this if not already done
 from services.assessments import (
-    start_assessment_for_solution,
-    submit_answers,
-    transition_assessment_to_review,
-    NoQuestionnaireError,
-    AssessmentAlreadyExists,
+    get_assessments_for_org,
+    create_assessment_from_request,
+    get_assessment_detail,
+    submit_assessment_for_review,
+    handle_answer_submission,
+    get_questionnaire_context,
 )
 
 
-# =========================
-# Start Assessment View
-# =========================
-@login_required
-def start_assessment(request, solution_id, org=None):
-    try:
-        assessment = start_assessment_for_solution(request.user, solution_id)
-        messages.success(request, "Assessment started.")
+# ====================================================
+# ✅ List Assessments – Org-wide for logged-in user
+# ====================================================
+class AssessmentListView(LoginRequiredMixin, ListView):
+    model = Assessment
+    context_object_name = "assessments"
+    template_name = "assessments/assessment_list.html"
 
-    except NoQuestionnaireError:
-        messages.error(request, "No questionnaire available.")
-        return redirect("vendors:vendor_list")
-
-    except AssessmentAlreadyExists as e:
-        messages.info(request, "Assessment already exists.")
-        assessment = e.existing_assessment
-
-    except Exception as e:
-        messages.error(request, f"Error: {str(e)}")
-        return redirect("vendors:vendor_list")
-
-    return redirect("assessments:assessment_detail", assessment_id=assessment.id)
+    def get_queryset(self):
+        return get_assessments_for_org(self.request.user.organization)
 
 
-# =========================
+# ====================================================
+# ✅ Create Assessment (Form POST)
+# ====================================================
+class AssessmentCreateView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, "assessments/assessment_form.html")
+
+    def post(self, request):
+        success, assessment, error = create_assessment_from_request(request)
+        if success:
+            messages.success(request, "Assessment created successfully.")
+            return redirect("assessments:detail", pk=assessment.id)
+        else:
+            messages.error(request, error)
+            return render(request, "assessments/assessment_form.html")
 
 
-# =========================
-# Answer Assessment View
-# =========================
-@login_required
-def answer_questions(request, assessment_id):
-    try:
-        assessment = get_object_or_404(
-            Assessment,
-            id=assessment_id,
-            organization=request.user.membership.organization,
+# ====================================================
+# ✅ View Assessment Detail
+# ====================================================
+class AssessmentDetailView(LoginRequiredMixin, DetailView):
+    model = Assessment
+    context_object_name = "assessment"
+    template_name = "assessments/assessment_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        detail_context = get_assessment_detail(
+            self.object.id, self.request.user.organization
         )
-
-        questions = Question.objects.filter(questionnaire=assessment.questionnaire)
-
-        if request.method == "POST":
-            submit_answers(request.user, assessment_id, request.POST)
-            messages.success(request, "Assessment submitted.")
-            return redirect(
-                "assessments:assessment_detail", assessment_id=assessment.id
-            )
-
-        existing_answers = {
-            ans.question.id: ans.response
-            for ans in Answer.objects.filter(assessment=assessment)
-        }
-
-        return render(
-            request,
-            "assessments/answer_questions.html",
-            {
-                "assessment": assessment,
-                "questions": questions,
-                "answers": existing_answers,
-            },
-        )
-
-    except Exception as e:
-        messages.error(request, f"Unable to load assessment: {str(e)}")
-        return redirect("vendors:vendor_list")
+        context.update(detail_context)
+        return context
 
 
-# =========================
+# ====================================================
+# ✅ Submit Assessment for Review
+# ====================================================
+class SubmitAssessmentForReviewView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        success, message = submit_assessment_for_review(request.user, pk)
+        if success:
+            messages.success(request, message)
+            return redirect("assessments:detail", pk=pk)
+        return HttpResponseBadRequest(message)
 
 
-# =========================
-# Assessment Detail View
-# =========================
-@login_required
-def assessment_detail(request, assessment_id, org):
-    assessment = get_object_or_404(
-        Assessment,
-        id=assessment_id,
-        organization=org,
-    )
+# ====================================================
+# ✅ Answer Questionnaire View (GET + POST)
+# ====================================================
+class AnswerQuestionnaireView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        context = get_questionnaire_context(pk, request.user.organization)
+        return render(request, "assessments/answer_questions.html", context)
 
-    try:
-        WorkflowObject.objects.get(
-            content_type__model=assessment._meta.model_name,
-            object_id=assessment.id,
-        )
-    except WorkflowObject.DoesNotExist:
-        workflow = Workflow.objects.get(name="Assessment Workflow")
-        initial_state = workflow.states.filter(is_initial=True).first()
-        WorkflowObject.objects.create(
-            content_object=assessment,
-            workflow=workflow,
-            current_state=initial_state,
-        )
-
-    answers = Answer.objects.filter(assessment=assessment).select_related("question")
-
-    return render(
-        request,
-        "assessments/assessment_detail.html",
-        {
-            "assessment": assessment,
-            "answers": answers,
-        },
-    )
-
-
-# =========================
-
-
-# =========================
-# Submit for Review (Workflow)
-# =========================
-@login_required
-def submit_for_review(request, assessment_id):
-    try:
-        success, message, assessment = transition_assessment_to_review(
-            request.user, assessment_id
-        )
-
-        if not success:
-            return HttpResponseBadRequest(f"Transition failed: {message}")
-
-        messages.success(request, "Assessment moved to 'Review' state.")
-        return redirect("assessments:assessment_detail", assessment_id=assessment.id)
-
-    except Exception as e:
-        return HttpResponseBadRequest("An unexpected error occurred.")
+    def post(self, request, pk):
+        success, message = handle_answer_submission(request.user, pk, request.POST)
+        if success:
+            messages.success(request, "Answers submitted successfully.")
+            return redirect("assessments:detail", pk=pk)
+        messages.error(request, message)
+        context = get_questionnaire_context(pk, request.user.organization)
+        return render(request, "assessments/answer_questions.html", context)

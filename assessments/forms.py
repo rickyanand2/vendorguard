@@ -1,17 +1,28 @@
 from django import forms
-from .models import Assessment, Answer
+from assessments.models import Assessment
+from taggit.forms import TagField
+from assessments.constants import InfoValueLevels, RiskLevels
+from .models import Answer, Assessment, Questionnaire, Question
+from assessments.constants import ANSWER_CHOICES
 
 
 class AssessmentForm(forms.ModelForm):
-    """Form for creating or updating an Assessment."""
+    info_value = forms.ChoiceField(
+        choices=InfoValueLevels.choices,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=True,
+        help_text="How sensitive is the data handled by this vendor?",
+    )
+    risk_level = forms.ChoiceField(
+        choices=RiskLevels.choices,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=True,
+        help_text="Overall risk level of this assessment.",
+    )
 
     class Meta:
         model = Assessment
-        fields = ["solution", "questionnaire"]
-        widgets = {
-            "solution": forms.Select(attrs={"class": "form-control"}),
-            "questionnaire": forms.Select(attrs={"class": "form-control"}),
-        }
+        fields = ["questionnaire", "vendor_offering", "info_value", "risk_level"]
 
 
 class AnswerForm(forms.ModelForm):
@@ -19,11 +30,9 @@ class AnswerForm(forms.ModelForm):
         model = Answer
         fields = ["answer", "response", "comments"]
         widgets = {
-            "answer": forms.Select(
-                choices=Answer.ANSWER_CHOICES, attrs={"class": "form-select"}
-            ),
-            "response": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
-            "comments": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+            "response": forms.Select(
+                choices=ANSWER_CHOICES, attrs={"class": "form-select"}
+            )
         }
         labels = {"response": "Your Answer"}
 

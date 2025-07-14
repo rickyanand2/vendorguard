@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     ### Other apps
     "widget_tweaks",
+    "taggit",
     ### Custom Apps
     "accounts.apps.AccountsConfig",  # Authentication and Authorization | Full path for super user creation
     "website",  # Also has template tags

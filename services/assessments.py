@@ -1,216 +1,177 @@
 # services/assessments.py
+
 from django.shortcuts import get_object_or_404
-from assessments.models import Assessment, Answer, Questionnaire, Question
-from accounts.models import Membership
-from workflow.utils import perform_transition
-from vendors.models import VendorTrustProfile, VendorOffering
+from assessments.models import Assessment, Questionnaire, Answer, Question
+from vendors.models import VendorOffering
+from workflow.models import Workflow, WorkflowObject
+from django.db import transaction
 
 
-# =========================
-# Custom Exceptions
-# =========================
-class NoQuestionnaireError(Exception):
-    pass
-
-
-class AssessmentAlreadyExists(Exception):
-    def __init__(self, existing_assessment):
-        self.existing_assessment = existing_assessment
-
-
-# =========================
-
-
-# =========================
-# Start a new assessment
-# =========================
-def start_assessment_for_solution(user, solution_id):
-    solution = get_object_or_404(Solution, id=solution_id)
-    org = user.membership.organization
-
-    if hasattr(solution, "assessment"):
-        return solution.assessment  # Already exists
-
-    questionnaire = Questionnaire.objects.order_by("id").first()
-    if not questionnaire:
-        raise NoQuestionnaireError("No questionnaire available.")
-
-    existing = Assessment.objects.filter(
-        organization=org,
-        solution=solution,
-        questionnaire=questionnaire,
-    ).first()
-
-    if existing:
-        print(">>> Returning existing assessment", existing.id)
-        raise AssessmentAlreadyExists(existing)
-
-    return Assessment.objects.create(
-        solution=solution,
-        organization=org,
-        questionnaire=questionnaire,
+# ===========================
+# ✅ Get assessments by org
+# ===========================
+def get_assessments_for_org(org):
+    """
+    Fetch all assessments that belong to the user's organization.
+    """
+    return Assessment.objects.filter(organization=org).select_related(
+        "questionnaire", "vendor_offering"
     )
 
 
-# =========================
+# ===========================
+# ✅ Create new assessment
+# ===========================
+def create_assessment_from_request(request):
+    """
+    Handles form submission for assessment creation.
+    Expects POST data: questionnaire, vendor_offering
+    """
+    try:
+        info_value = request.POST.get("info_value")
+        risk_level = request.POST.get("risk_level")
+        questionnaire_id = request.POST.get("questionnaire")
+        offering_id = request.POST.get("vendor_offering")
+
+        if not questionnaire_id or not offering_id:
+            return False, None, "Both Questionnaire and Offering are required."
+
+        questionnaire = get_object_or_404(Questionnaire, id=questionnaire_id)
+        offering = get_object_or_404(
+            VendorOffering,
+            id=offering_id,
+            vendor__organization=request.user.organization,
+        )
+
+        # Prevent duplicates (optional)
+        existing = Assessment.objects.filter(
+            organization=request.user.organization,
+            questionnaire=questionnaire,
+            vendor_offering=offering,
+        ).first()
+        if existing:
+            return True, existing, "Assessment already exists. Redirecting..."
+
+        assessment = Assessment.objects.create(
+            questionnaire=questionnaire,
+            vendor_offering=offering,
+            organization=request.user.organization,
+            info_value=info_value,
+            risk_level=risk_level,
+        )
+
+        # Automatically create workflow object
+        workflow = Workflow.objects.get(name="Assessment Workflow")
+        initial_state = workflow.states.filter(is_initial=True).first()
+        WorkflowObject.objects.create(
+            content_object=assessment,
+            workflow=workflow,
+            current_state=initial_state,
+        )
+
+        return True, assessment, None
+
+    except Exception as e:
+        return False, None, f"Error creating assessment: {str(e)}"
 
 
-# =========================
-# Submit answers to assessment
-# =========================
-def submit_answers(user, assessment_id, post_data):
-    assessment = get_object_or_404(
-        Assessment,
-        id=assessment_id,
-        organization=user.membership.organization,
-    )
+# ===========================
+# ✅ Get context for detail view
+# ===========================
+def get_assessment_detail(assessment_id, org):
+    """
+    Fetch assessment, questions, and answers for detail view.
+    Now includes recommended risk level and information value.
+    """
+    assessment = get_object_or_404(Assessment, id=assessment_id, organization=org)
+    answers = Answer.objects.filter(assessment=assessment).select_related("question")
+    questions = assessment.questionnaire.questions.all()
 
+    return {
+        "assessment": assessment,
+        "answers": answers,
+        "questions": questions,
+        "recommended_risk": assessment.recommended_risk_level,  # ⬅️ from model
+        "info_value": assessment.info_value,  # ⬅️ from model
+    }
+
+
+# ===========================
+# ✅ Submit for Review Workflow
+# ===========================
+def submit_assessment_for_review(user, assessment_id):
+    """
+    Move assessment to 'Review' state using workflow engine.
+    """
+    try:
+        assessment = get_object_or_404(
+            Assessment, id=assessment_id, organization=user.organization
+        )
+        wf_obj = WorkflowObject.objects.get_for_model(assessment)
+
+        next_state = wf_obj.workflow.states.filter(name="Review").first()
+        if not next_state:
+            return False, "Review state not found."
+
+        wf_obj.current_state = next_state
+        wf_obj.save()
+
+        return True, "Assessment moved to review."
+
+    except Exception as e:
+        return False, f"Workflow error: {str(e)}"
+
+
+# ===========================
+# ✅ Submit answers (POST)
+# ===========================
+def handle_answer_submission(user, assessment_id, post_data):
+    """
+    Parse and save submitted answers for each question in the assessment.
+    """
+    try:
+        assessment = get_object_or_404(
+            Assessment, id=assessment_id, organization=user.organization
+        )
+        questions = Question.objects.filter(questionnaire=assessment.questionnaire)
+
+        with transaction.atomic():
+            for question in questions:
+                key = f"question_{question.id}"
+                response = post_data.get(key)
+                if response is None:
+                    continue  # Skipped question
+
+                answer_obj, _ = Answer.objects.get_or_create(
+                    assessment=assessment,
+                    question=question,
+                )
+                answer_obj.response = response
+                answer_obj.save()
+
+        return True, "Answers submitted."
+
+    except Exception as e:
+        return False, f"Error saving answers: {str(e)}"
+
+
+# ===========================
+# ✅ Build context for Q&A form
+# ===========================
+def get_questionnaire_context(assessment_id, org):
+    """
+    Prepares the question-answer view context with form fields prefilled.
+    """
+    assessment = get_object_or_404(Assessment, id=assessment_id, organization=org)
     questions = Question.objects.filter(questionnaire=assessment.questionnaire)
 
-    for question in questions:
-        response = post_data.get(f"response_{question.id}")
-        if response:
-            Answer.objects.update_or_create(
-                assessment=assessment,
-                question=question,
-                defaults={"response": response},
-            )
+    existing_answers = {
+        ans.question.id: ans.response
+        for ans in Answer.objects.filter(assessment=assessment)
+    }
 
-    # Scoring
-    total_weight = 0
-    score = 0
-    for question in questions:
-        try:
-            answer = Answer.objects.get(assessment=assessment, question=question)
-            weight = question.weight or 1
-            total_weight += weight
-            if answer.response.lower() == "yes":
-                score += weight
-        except Answer.DoesNotExist:
-            continue
-
-    assessment.status = "submitted"
-    assessment.score = (score / total_weight) * 100 if total_weight else 0
-    assessment.save()
-    return assessment
-
-
-# =========================
-
-
-# =========================
-# Perform workflow transition
-# =========================
-def transition_assessment_to_review(user, assessment_id):
-    assessment = get_object_or_404(
-        Assessment,
-        id=assessment_id,
-        organization=user.membership.organization,
-    )
-
-    success, message = perform_transition(
-        obj=assessment,
-        to_state_name="Review",
-        user=user,
-        comment="Submitted for review",
-    )
-
-    return success, message, assessment
-
-
-# =========================
-
-"""
-    Calculates average risk score from all assessments linked to the vendor's offerings.
-    Returns None if no assessments exist or if all scores are missing.
-"""
-
-
-def calculate_aggregate_vendor_risk_score(vendor):
-    offerings = VendorOffering.objects.filter(vendor=vendor)
-    trust_score = (
-        vendor.trust_profile.trust_score if hasattr(vendor, "trust_profile") else 0
-    )
-
-    offering_scores = sum(o.risk_score or 0 for o in offerings)
-
-    return offering_scores + trust_score
-
-
-"""
-    Recalculates and saves the trust_score on the vendor's trust profile.
-
-    Args:
-        vendor: Vendor instance
-        create_if_missing: whether to create the VendorTrustProfile if it doesn't exist
-"""
-
-
-def update_vendor_trust_score(vendor, create_if_missing=True):
-
-    score = calculate_aggregate_vendor_risk_score(vendor)
-
-    trust_profile = getattr(vendor, "trust_profile", None)
-    if not trust_profile and create_if_missing:
-        trust_profile = VendorTrustProfile.objects.create(vendor=vendor)
-
-    if trust_profile:
-        trust_profile.trust_score = score or 0
-        trust_profile.save()
-
-    return score
-
-
-# services/trust_profile.py
-from datetime import date, timedelta
-
-
-# ==================================================
-# Trust Profile Scoring Logic
-# Returns a trust score (0–100) based on vendor certifications and profile data.
-# ==================================================
-class VendorTrustProfileService:
-    def __init__(self, vendor):
-        self.vendor = vendor
-        self.profile = vendor.trust_profile
-
-    def get_cert_weights(self):
-        """
-        Simple additive scoring:
-        +25 for GDPR
-        +25 for ISO 27001
-        +20 for SOC 2
-        +20 for cyber insurance
-        -20 if breach occurred in last 12 months
-        Max: 100
-        """
-        return {
-            "GDPR": 25,
-            "ISO_27001": 25,
-            "SOC2": 20,
-            "PCI_DSS": 15,
-            "IRAP": 15,
-        }
-
-    def calculate_score(self):
-        score = 0
-        cert_weights = self.get_cert_weights()
-
-        for cert in self.vendor.certifications.all():
-            score += cert_weights.get(cert.type, 0)
-
-        if self.profile.has_cyber_insurance:
-            score += 20
-
-        if self.profile.last_breach_date:
-            from datetime import date, timedelta
-
-            if self.profile.last_breach_date >= date.today() - timedelta(days=365):
-                score -= 20
-
-        return max(0, min(score, 100))
-
-    def update_score(self):
-        self.profile.trust_score = self.calculate_score()
-        self.profile.save()
-        return self.profile.trust_score
+    return {
+        "assessment": assessment,
+        "questions": questions,
+        "answers": existing_answers,
+    }

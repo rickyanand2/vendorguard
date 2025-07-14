@@ -33,15 +33,19 @@
                     {% endfor %}
                   </ul>
                 {% else %}
-                  <em>No vendor offerings yet</em>
+                  <em>No offerings provided.</em>
                 {% endif %}
               </td>
+              <!-- ACTION BUTTONS -->
 
               <td>
-                <div class="d-flex gap-2">
-                  <a href="{% url 'vendors:vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-secondary">View</a>
-                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
-                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-sm btn-outline-info"><i class="bi btn-outline-secondary"></i> Archive</a>
+                <div class="d-flex gap-2 mb-3">
+                  <a href="{% url 'vendors:vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-secondary">View Vendor</a>
+                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit Vendor</a>
+                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-outline-danger"><i class="bi bi-archive"></i> Archive</a>
+                </div>
+                <div class="flex-wrap">
+                  <a href="{% url 'vendors:offering_add' vendor.id %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Offering</a>
                 </div>
               </td>
             </tr>

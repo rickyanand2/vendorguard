@@ -3,6 +3,12 @@
   Assessment Detail
 {% endblock %}
 
+<!-- Code to Clean up after -->>
+{# extends 'base.html' %} {% block content %} <h2>{{ assessment.vendor_offering.name }} Assessment</h2> <p>Status: {{ assessment.get_status_display }}</p>
+
+<table class="table"> <thead> <tr> <th>Question</th> <th>Answer</th> <th>Comments</th> <th>Action</th> </tr> </thead> <tbody> {% for q in questions %} <tr> <td>{{ q.text }}</td> <td>{{ answers|get_item:q.id|default:'Not answered' }}</td> <td>{{ answers|get_item:q.id.comments }}</td> <td> <a href="{% url 'assessments:answer_update' answers|get_item:q.id.id %}">Edit</a> </td> </tr> {% endfor %} </tbody> </table> {% endblock %}
+#}
+
 {% block content %}
   <div class="container mt-4">
     <!-- File: templates/assessments/assessment_detail.html -->

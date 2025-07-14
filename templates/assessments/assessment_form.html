@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <h2>Create Assessment</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_questionnaire">Questionnaire</label>
+      {{ form.questionnaire }}
+    </div>
+    <div class="mb-3">
+      <label for="id_vendor_offering">Vendor Offering</label>
+      {{ form.vendor_offering }}
+    </div>
+    <div class="mb-3">
+      <label for="id_info_value">Information Value</label>
+      {{ form.info_value }}
+      <small class="form-text text-muted">{{ form.info_value.help_text }}</small>
+    </div>
+    <div class="mb-3">
+      <label for="id_risk_level">Risk Level</label>
+      {{ form.risk_level }}
+      <small class="form-text text-muted">{{ form.risk_level.help_text }}</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Assessment</button>
+  </form>
+{% endblock %}

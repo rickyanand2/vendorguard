@@ -4,6 +4,7 @@ from django.db import models
 from vendors.models import Vendor, VendorOffering, cert_artifact_path
 from accounts.models import Organization
 from common.models import TimeStampedModel
+from taggit.managers import TaggableManager
 from .constants import (
     CertificationTypes,
     ResponseTypes,
@@ -11,6 +12,8 @@ from .constants import (
     AssessmentStatuses,
     QuestionCategories,
     evidence_upload_path,
+    RiskLevels,
+    InfoValueChoices,
 )
 
 
@@ -33,6 +36,7 @@ class Certification(TimeStampedModel):
         help_text="Optional: Upload certification file",
     )
     external_url = models.URLField(blank=True)
+    is_archived = models.BooleanField(default=False)  # ✅ Archive support
 
     def __str__(self):
         return f"{self.vendor.name} - {self.get_type_display()}"
@@ -48,6 +52,8 @@ class Questionnaire(TimeStampedModel):
     name = models.CharField(max_length=255)
 
     description = models.TextField(blank=True)
+    is_archived = models.BooleanField(default=False)
+    tags = TaggableManager(blank=True)
 
     def __str__(self):
         return self.name
@@ -59,6 +65,10 @@ class Question(TimeStampedModel):
     Includes optional help text and a weight to indicate importance.
     """
 
+    questionnaire = models.ForeignKey(
+        Questionnaire, on_delete=models.CASCADE, related_name="questions"
+    )
+
     category = models.CharField(
         max_length=50,
         choices=QuestionCategories.choices,
@@ -66,14 +76,14 @@ class Question(TimeStampedModel):
     )
 
     response_type = models.CharField(max_length=20, choices=ResponseTypes.choices)
-    questionnaire = models.ForeignKey(
-        Questionnaire, on_delete=models.CASCADE, related_name="questions"
-    )
+
     text = models.TextField()
     help_text = models.CharField(max_length=255, blank=True)
     weight = models.IntegerField(
         default=1, help_text="Used in risk scoring calculations"
     )
+    tags = models.JSONField(default=list, blank=True)  # ✅ Tags (e.g. ["ISO", "PCI"])
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Q: {self.text[:50]}"
@@ -96,9 +106,25 @@ class Assessment(TimeStampedModel):
         choices=AssessmentStatuses.choices,
         default=AssessmentStatuses.DRAFT,
     )
-    score = models.FloatField(
-        default=0.0, help_text="Overall score after assessment completion"
+
+    information_value = models.CharField(
+        max_length=20,
+        choices=InfoValueChoices.choices,
+        default=InfoValueChoices.MODERATE,
+        help_text="Based on criticality of the data/function being assessed",
     )
+
+    recommended_score = models.FloatField(
+        default=0.0, help_text="System-generated score from answers (0–100 scale)"
+    )
+
+    risk_level = models.CharField(
+        max_length=20,
+        choices=RiskLevels.choices,
+        default=RiskLevels.UNDETERMINED,
+        help_text="Risk level decided after manual review or tagging",
+    )
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.vendor_offering.name} Assessment ({self.status})"
@@ -131,4 +157,4 @@ class Answer(TimeStampedModel):
         unique_together = ("assessment", "question")
 
     def __str__(self):
-        return f"{self.assessment.id} - {self.question.text[:30]}: {self.answer}"
+        return f"Assessment {self.assessment.id}: Q-{self.question.id} ({self.answer})"

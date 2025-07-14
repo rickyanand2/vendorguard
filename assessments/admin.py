@@ -29,19 +29,24 @@ class AssessmentAdmin(admin.ModelAdmin):
     get_vendor.admin_order_field = "vendor_offering__vendor"
 
     list_display = (
+        "name",
+        "description",
         "get_vendor",
         "vendor_offering",
         "organization",
         "questionnaire",
         "status",
-        "score",
+        "risk_level",
         "created_at",
     )
+
     search_fields = (
+        "name",
         "VendorOffering__vendor__name",
         "organization__name",
         "questionnaire__name",
     )
+    filter_horizontal = ("tags",)
     list_filter = ("status", "questionnaire", "created_at")
     ordering = ("-created_at",)
 

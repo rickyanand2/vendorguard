@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="container mt-4">
+    <h2>{{ questionnaire.name }}</h2>
+    <p>{{ questionnaire.description }}</p>
+
+    {% if questionnaire.tags.exists %}
+      <p>
+        <strong>Tags:</strong> {{ questionnaire.tags.all|join:', ' }}
+      </p>
+    {% endif %}
+
+    <a href="{% url 'assessments:questionnaire_list' %}" class="btn btn-link">Back</a>
+  </div>
+{% endblock %}

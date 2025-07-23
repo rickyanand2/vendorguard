@@ -1,0 +1,122 @@
+[
+  {
+    "model": "assessments.questionnaire",
+    "pk": 1,
+    "fields": {
+      "name": "NIST Default Questionnaire",
+      "description": "Baseline NIST CSF questions for foundational assessments",
+          "created_at": "2025-07-18T12:00:00Z",
+    "updated_at": "2025-07-18T12:00:00Z"
+      
+    }
+  },
+
+  {
+    "model": "assessments.question",
+    "pk": 1,
+    "fields": {
+      "questionnaire": 1,
+      "category": "identify",
+      "response_type": "yes_no",
+      "text": "Does the vendor maintain an up-to-date asset inventory?",
+      "help_text": "Includes hardware, software, and cloud assets.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 2,
+    "fields": {
+      "questionnaire": 1,
+      "category": "protect",
+      "response_type": "yes_no",
+      "text": "Are access controls enforced based on least privilege?",
+      "help_text": "Users only have access to what they need to perform their roles.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 3,
+    "fields": {
+      "questionnaire": 1,
+      "category": "detect",
+      "response_type": "yes_no",
+      "text": "Does the organization have intrusion detection systems (IDS) in place?",
+      "help_text": "Covers network-based and host-based IDS/IPS.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 4,
+    "fields": {
+      "questionnaire": 1,
+      "category": "respond",
+      "response_type": "yes_no",
+      "text": "Is there a documented and tested incident response plan?",
+      "help_text": "Should cover containment, eradication, and recovery steps.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 5,
+    "fields": {
+      "questionnaire": 1,
+      "category": "recover",
+      "response_type": "yes_no",
+      "text": "Does the vendor test backup restoration procedures regularly?",
+      "help_text": "E.g., full restore tests from backups at least quarterly.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  },
+  {
+    "model": "assessments.question",
+    "pk": 6,
+    "fields": {
+      "questionnaire": 1,
+      "category": "governance",
+      "response_type": "yes_no",
+      "text": "Has the vendor assigned clear security roles and responsibilities?",
+      "help_text": "Governance structure should be documented and known across teams.",
+      "weight": 1,
+      
+      "is_required": true,
+      "is_nist_template": true,
+      "created_at": "2025-07-18T12:00:00Z",
+      "updated_at": "2025-07-18T12:00:00Z"
+
+    }
+  }
+]

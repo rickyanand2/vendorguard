@@ -54,6 +54,9 @@ class Questionnaire(TimeStampedModel):
     description = models.TextField(blank=True)
     is_archived = models.BooleanField(default=False)
     tags = TaggableManager(blank=True)
+    question = models.ManyToManyField(
+        "Question", through="QuestionnaireQuestion", related_name="questionnaires"
+    )
 
     def __str__(self):
         return self.name
@@ -83,6 +86,8 @@ class Question(TimeStampedModel):
         default=1, help_text="Used in risk scoring calculations"
     )
     tags = models.JSONField(default=list, blank=True)  # ✅ Tags (e.g. ["ISO", "PCI"])
+    is_required = models.BooleanField(default=False)
+    is_nist_template = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
 
     def __str__(self):
@@ -96,6 +101,7 @@ class Assessment(TimeStampedModel):
     """
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+
     vendor_offering = models.ForeignKey(
         VendorOffering, on_delete=models.CASCADE, related_name="assessments"
     )
@@ -124,6 +130,14 @@ class Assessment(TimeStampedModel):
         default=RiskLevels.UNDETERMINED,
         help_text="Risk level decided after manual review or tagging",
     )
+
+    recommended_risk_level = models.CharField(
+        max_length=20,
+        choices=RiskLevels.choices,
+        default=RiskLevels.UNDETERMINED,
+        help_text="Risk level recommended by artifacts",
+    )
+
     is_archived = models.BooleanField(default=False)
 
     def __str__(self):
@@ -143,7 +157,8 @@ class Answer(TimeStampedModel):
         Assessment, on_delete=models.CASCADE, related_name="answers"
     )
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    response = models.TextField()  # 👈 THIS MUST EXIST
+    response = models.CharField(max_length=20, choices=AnswerChoices.choices)
+    supporting_text = models.TextField(blank=True, null=True)
     answer = models.CharField(max_length=10, choices=AnswerChoices.choices)
     comments = models.TextField(
         blank=True, help_text="Optional justification or context"
@@ -158,3 +173,16 @@ class Answer(TimeStampedModel):
 
     def __str__(self):
         return f"Assessment {self.assessment.id}: Q-{self.question.id} ({self.answer})"
+
+
+class QuestionnaireQuestion(models.Model):
+    questionnaire = models.ForeignKey("Questionnaire", on_delete=models.CASCADE)
+    question = models.ForeignKey("Question", on_delete=models.CASCADE)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("questionnaire", "question")
+        ordering = ["order"]
+
+        def __str__(self):
+            return f"{self.questionnaire.name} - {self.question.text[:50]}"

@@ -2,9 +2,11 @@
 
 from django.shortcuts import get_object_or_404
 from assessments.models import Assessment, Questionnaire, Answer, Question
+from assessments.constants import AnswerChoices
 from vendors.models import VendorOffering
 from workflow.models import Workflow, WorkflowObject
 from django.db import transaction
+from django.forms import modelform_factory
 
 
 # ===========================
@@ -28,7 +30,7 @@ def create_assessment_from_request(request):
     Expects POST data: questionnaire, vendor_offering
     """
     try:
-        info_value = request.POST.get("info_value")
+        info_value = request.POST.get("information_value")
         risk_level = request.POST.get("risk_level")
         questionnaire_id = request.POST.get("questionnaire")
         offering_id = request.POST.get("vendor_offering")
@@ -56,7 +58,7 @@ def create_assessment_from_request(request):
             questionnaire=questionnaire,
             vendor_offering=offering,
             organization=request.user.organization,
-            info_value=info_value,
+            information_value=info_value,
             risk_level=risk_level,
         )
 
@@ -92,7 +94,7 @@ def get_assessment_detail(assessment_id, org):
         "answers": answers,
         "questions": questions,
         "recommended_risk": assessment.recommended_risk_level,  # ⬅️ from model
-        "info_value": assessment.info_value,  # ⬅️ from model
+        "info_value": assessment.information_value,  # ⬅️ from model
     }
 
 
@@ -125,53 +127,48 @@ def submit_assessment_for_review(user, assessment_id):
 # ===========================
 # ✅ Submit answers (POST)
 # ===========================
-def handle_answer_submission(user, assessment_id, post_data):
-    """
-    Parse and save submitted answers for each question in the assessment.
-    """
+def handle_answer_submission(user, assessment_id, post_data, files=None):
     try:
-        assessment = get_object_or_404(
-            Assessment, id=assessment_id, organization=user.organization
+        assessment = Assessment.objects.get(
+            id=assessment_id, organization=user.organization
         )
-        questions = Question.objects.filter(questionnaire=assessment.questionnaire)
+        questionnaire = assessment.questionnaire
+        questions = questionnaire.questions.filter(is_archived=False)
 
-        with transaction.atomic():
-            for question in questions:
-                key = f"question_{question.id}"
-                response = post_data.get(key)
-                if response is None:
-                    continue  # Skipped question
+        for question in questions:
+            prefix = f"q_{question.id}"
+            response = post_data.get(f"{prefix}_response")
+            supporting_text = post_data.get(f"{prefix}_supporting_text", "")
+            comments = post_data.get(f"{prefix}_comments", "")
+            evidence = files.get(f"{prefix}_evidence") if files else None
 
-                answer_obj, _ = Answer.objects.get_or_create(
+            if response:
+                Answer.objects.update_or_create(
                     assessment=assessment,
                     question=question,
+                    defaults={
+                        "response": response,
+                        "supporting_text": supporting_text,
+                        "comments": comments,
+                        "evidence": evidence,
+                    },
                 )
-                answer_obj.response = response
-                answer_obj.save()
-
-        return True, "Answers submitted."
-
+        return True, "Answers submitted successfully."
     except Exception as e:
-        return False, f"Error saving answers: {str(e)}"
+        return False, str(e)
 
 
 # ===========================
 # ✅ Build context for Q&A form
 # ===========================
-def get_questionnaire_context(assessment_id, org):
-    """
-    Prepares the question-answer view context with form fields prefilled.
-    """
-    assessment = get_object_or_404(Assessment, id=assessment_id, organization=org)
-    questions = Question.objects.filter(questionnaire=assessment.questionnaire)
+def get_questionnaire_context(assessment_id, organization):
+    assessment = Assessment.objects.get(id=assessment_id, organization=organization)
+    questionnaire = assessment.questionnaire
+    questions = questionnaire.questions.filter(is_archived=False)
 
-    existing_answers = {
-        ans.question.id: ans.response
-        for ans in Answer.objects.filter(assessment=assessment)
-    }
-
-    return {
+    context = {
         "assessment": assessment,
         "questions": questions,
-        "answers": existing_answers,
+        "answer_choices": AnswerChoices.choices,
     }
+    return context

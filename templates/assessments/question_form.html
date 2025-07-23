@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="container mt-4">
-    <h2>Create Assessment</h2>
+  <div class="container mt-5">
+    <h3>Create Question</h3>
     <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
-      <button type="submit" class="btn btn-success">Create</button>
+      <button class="btn btn-primary" type="submit">Save</button>
     </form>
   </div>
 {% endblock %}

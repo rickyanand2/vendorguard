@@ -1,13 +1,19 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h2>My Assessments</h2>
-  <ul>
-    {% for a in assessments %}
-      <li>
-        <a href="{% url 'assessments:detail' a.pk %}">{{ a.vendor_offering }} – {{ a.status }} – {{ a.score }}</a>
-      </li>
-    {% empty %}
-      <li>No assessments found.</li>
-    {% endfor %}
-  </ul>
+  <div class="container mt-4">
+    <h2>All Assessments</h2>
+    <a href="{% url 'assessments:assessment_create' %}" class="btn btn-primary mb-3">New Assessment</a>
+
+    {% if assessments %}
+      <ul class="list-group">
+        {% for assessment in assessments %}
+          <li class="list-group-item">
+            <a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.vendor_offering.name }} – {{ assessment.get_status_display }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No assessments found.</p>
+    {% endif %}
+  </div>
 {% endblock %}

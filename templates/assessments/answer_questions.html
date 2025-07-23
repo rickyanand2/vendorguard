@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <div class="container mt-4">
+    <h2>Answer Questionnaire: {{ assessment.questionnaire.name }}</h2>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for question in questions %}
+        <div class="mb-4 border rounded p-3">
+          <p>
+            <strong>Q{{ forloop.counter }}: {{ question.text }}</strong>
+          </p>
+
+          <div class="mb-2">
+            <label for="q_{{ question.id }}_response">Response</label>
+            <select name="q_{{ question.id }}_response" class="form-select" required>
+              <option value="">Select</option>
+              {% for value, label in answer_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label for="q_{{ question.id }}_supporting_text">Supporting Explanation (optional)</label>
+            <textarea name="q_{{ question.id }}_supporting_text" class="form-control" rows="2"></textarea>
+          </div>
+
+          <div class="mb-2">
+            <label for="q_{{ question.id }}_comments">Comments (optional)</label>
+            <textarea name="q_{{ question.id }}_comments" class="form-control" rows="2"></textarea>
+          </div>
+
+          <div class="mb-2">
+            <label for="q_{{ question.id }}_evidence">Upload Evidence (optional)</label>
+            <input type="file" name="q_{{ question.id }}_evidence" class="form-control" />
+          </div>
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="btn btn-success">Submit Answers</button>
+    </form>
+  </div>
+{% endblock %}

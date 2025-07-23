@@ -1,9 +1,31 @@
+# assessments/forms.py
+
 from django import forms
 from assessments.models import Assessment
-from taggit.forms import TagField
+from taggit.forms import TagWidget
 from assessments.constants import InfoValueLevels, RiskLevels
 from .models import Answer, Assessment, Questionnaire, Question
-from assessments.constants import ANSWER_CHOICES
+from assessments.constants import AnswerChoices
+from .constants import InfoValueChoices, RiskLevels, AnswerChoices
+
+
+class QuestionForm(forms.ModelForm):
+    class Meta:
+        model = Question
+        fields = ["text", "help_text", "is_required", "is_archived"]
+        widgets = {
+            "text": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "help_text": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+        }
+
+
+class QuestionnaireForm(forms.ModelForm):
+    class Meta:
+        model = Questionnaire
+        fields = ["name", "description", "tags", "is_archived"]
+        widgets = {
+            "tags": TagWidget(),
+        }
 
 
 class AssessmentForm(forms.ModelForm):
@@ -22,19 +44,25 @@ class AssessmentForm(forms.ModelForm):
 
     class Meta:
         model = Assessment
-        fields = ["questionnaire", "vendor_offering", "info_value", "risk_level"]
+        fields = ["questionnaire", "information_value", "risk_level", "status"]
+        widgets = {
+            "information_value": forms.Select(choices=InfoValueChoices.choices),
+            "risk_level": forms.Select(choices=RiskLevels.choices),
+        }
 
 
 class AnswerForm(forms.ModelForm):
     class Meta:
         model = Answer
-        fields = ["answer", "response", "comments"]
+        fields = ["response", "supporting_text", "comments", "evidence"]
         widgets = {
-            "response": forms.Select(
-                choices=ANSWER_CHOICES, attrs={"class": "form-select"}
-            )
+            "response": forms.Select(choices=AnswerChoices.choices),
         }
-        labels = {"response": "Your Answer"}
+        labels = {
+            "response": "Answer",
+            "supporting_text": "Explain your response (optional)",
+            "evidence": "Attach file (if any)",
+        }
 
 
 class InlineAnswerForm(forms.ModelForm):

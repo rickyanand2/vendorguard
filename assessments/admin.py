@@ -1,58 +1,83 @@
 # assessments/admin.py
 
 from django.contrib import admin
-from .models import Questionnaire, Question, Assessment, Answer
-
-
-@admin.register(Questionnaire)
-class QuestionnaireAdmin(admin.ModelAdmin):
-    list_display = ("name", "description")
-    search_fields = ("name", "description")
-    ordering = ("name",)
-
-
-@admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("text", "questionnaire", "weight")
-    search_fields = ("text", "help_text")
-    list_filter = ("questionnaire",)
-    ordering = ("questionnaire", "weight")
+from .models import (
+    Assessment,
+    Questionnaire,
+    Question,
+    Answer,
+    Certification,
+    QuestionnaireQuestion,
+)
 
 
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
-    # Safe accessor for vendor via VendorOffering
-    def get_vendor(self, obj):
-        return obj.VendorOffering.vendor
-
-    get_vendor.short_description = "Vendor"
-    get_vendor.admin_order_field = "vendor_offering__vendor"
-
     list_display = (
-        "name",
-        "description",
-        "get_vendor",
+        "id",
+        "get_questionnaire_name",
         "vendor_offering",
-        "organization",
-        "questionnaire",
         "status",
+        "information_value",
+        "recommended_score",
         "risk_level",
         "created_at",
     )
+    list_filter = ("status", "risk_level", "information_value", "created_at")
+    search_fields = ("vendor_offering__name", "questionnaire__name")
 
-    search_fields = (
-        "name",
-        "VendorOffering__vendor__name",
-        "organization__name",
-        "questionnaire__name",
+    def get_questionnaire_name(self, obj):
+        return obj.questionnaire.name
+
+    get_questionnaire_name.short_description = "Questionnaire"
+
+
+class QuestionnaireQuestionInline(admin.TabularInline):
+    model = QuestionnaireQuestion
+    extra = 1
+    autocomplete_fields = ["questionnaire"]
+    ordering = ["order"]
+
+
+@admin.register(Questionnaire)
+class QuestionnaireAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "description", "is_archived", "created_at")
+    inlines = [QuestionnaireQuestionInline]
+    search_fields = ("name", "description")
+    list_filter = ("is_archived",)
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "text",
+        "questionnaire",
+        "category",
+        "response_type",
+        "weight",
+        "is_archived",
     )
-    filter_horizontal = ("tags",)
-    list_filter = ("status", "questionnaire", "created_at")
-    ordering = ("-created_at",)
+    list_filter = ("questionnaire", "category", "is_archived")
+    search_fields = ("text", "help_text")
 
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
-    list_display = ("assessment", "question", "answer", "risk_impact")
-    search_fields = ("question__text", "assessment__VendorOffering__vendor__name")
-    list_filter = ("answer", "question__questionnaire")
+    list_display = ("id", "assessment", "question", "answer", "risk_impact")
+    search_fields = ("assessment__vendor_offering__name", "question__text")
+
+
+@admin.register(Certification)
+class CertificationAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "vendor",
+        "type",
+        "is_valid",
+        "issued_date",
+        "expiry_date",
+        "is_archived",
+    )
+    list_filter = ("type", "is_valid", "is_archived")
+    search_fields = ("vendor__name", "cert_number")

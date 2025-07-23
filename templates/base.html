@@ -30,6 +30,22 @@
             {% if user.is_authenticated and user.is_owner %}
               <a href="{% url 'accounts:manage_team' %}" class="me-3 text-muted text-decoration-none">Team</a>
             {% endif %}
+
+            <a class="me-3 text-muted text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Assessments</a>
+            <div class="dropdown">
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="{% url 'assessments:questionnaire_list' %}">Questionnaires</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'assessments:question_list' %}">Questions</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'assessments:assessment_list' %}">All Assessments</a>
+                </li>
+              </ul>
+            </div>
+
             <a href="{% url 'vendors:vendor_list' %}" class="me-3 text-muted text-decoration-none">Vendors</a>
             <a href="{% url 'vendors:offering_list' %}" class="me-3 text-muted text-decoration-none">Offerings</a>
             <a href="{% url 'dashboard:dashboard' %}" class="me-3 text-muted text-decoration-none">Dashboard</a>
@@ -49,11 +65,14 @@
     <!-- MAIN CONTENT -->
     <main class="flex-grow-1">
       {% if messages %}
-        <ul class="messages">
+        <div class="container mt-3">
           {% for message in messages %}
-            <li class="{{ message.tags }}">{{ message }}</li>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
           {% endfor %}
-        </ul>
+        </div>
       {% endif %}
 
       {% block content %}

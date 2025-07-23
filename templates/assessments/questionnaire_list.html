@@ -1,11 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h2>Available Questionnaires</h2>
-  <ul>
-    {% for q in questionnaires %}
-      <li>{{ q.name }} – {{ q.description }}</li>
-    {% empty %}
-      <li>No questionnaires available.</li>
-    {% endfor %}
-  </ul>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-semibold">📋 All Questionnaires</h2>
+      <a href="{% url 'assessments:questionnaire_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Questionnaire</a>
+    </div>
+
+    {% if questionnaires %}
+      <div class="list-group shadow-sm">
+        {% for q in questionnaires %}
+          <a href="{% url 'assessments:questionnaire_detail' q.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ q.name }}</strong>
+              <small class="d-block text-muted">{{ q.description|truncatewords:12 }}</small>
+            </div>
+            {% if q.tags.exists %}
+              <span class="badge bg-info text-dark">{{ q.tags.all|join:', ' }}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No questionnaires found.</p>
+    {% endif %}
+  </div>
 {% endblock %}

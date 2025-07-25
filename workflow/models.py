@@ -51,8 +51,15 @@ class Transition(models.Model):
         return f"{self.from_state.name} ➜ {self.to_state.name} ({self.name})"
 
 
+class WorkflowObjectManager(models.Manager):
+    def get_for_instance(self, instance):
+        content_type = ContentType.objects.get_for_model(instance.__class__)
+        return self.get(content_type=content_type, object_id=instance.pk)
+
+
 # A generic link from a workflow to any model instance (e.g., Assessment)
 class WorkflowObject(models.Model):
+    objects = WorkflowObjectManager()
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey("content_type", "object_id")

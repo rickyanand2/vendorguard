@@ -1,5 +1,6 @@
 # accounts/views.py
 import logging
+from django.views import View
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import login
@@ -15,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from accounts.forms import AcceptInviteForm
 from django.views.generic import TemplateView
-
+from django.shortcuts import get_object_or_404, redirect
 from accounts.forms import (
     CustomSoloUserCreationForm,
     CustomTeamsCreationForm,
@@ -244,3 +245,15 @@ class RemoveTeamMemberView(TemplateView):
 
 
 # ====================================================================
+
+
+class SubmitAssessmentForReviewView(LoginRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        assessment = get_object_or_404(Assessment, pk=pk)
+
+        # Only allow status transition from draft to review
+        if assessment.status == "draft":
+            assessment.status = "review"
+            assessment.save()
+
+        return redirect("assessments:assessment_detail", pk=pk)

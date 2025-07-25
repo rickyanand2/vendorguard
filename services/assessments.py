@@ -7,6 +7,13 @@ from vendors.models import VendorOffering
 from workflow.models import Workflow, WorkflowObject
 from django.db import transaction
 from django.forms import modelform_factory
+from services.workflow import (
+    get_or_create_workflow_object,
+    apply_transition,
+    ensure_workflow_for_object,
+    get_available_transitions,
+)
+from django.contrib.contenttypes.models import ContentType
 
 
 # ===========================
@@ -101,27 +108,31 @@ def get_assessment_detail(assessment_id, org):
 # ===========================
 # ✅ Submit for Review Workflow
 # ===========================
-def submit_assessment_for_review(user, assessment_id):
-    """
-    Move assessment to 'Review' state using workflow engine.
-    """
+def submit_assessment_for_review(user, pk):
+    from assessments.models import Assessment  # prevent circular import
+
     try:
-        assessment = get_object_or_404(
-            Assessment, id=assessment_id, organization=user.organization
+        assessment = Assessment.objects.get(pk=pk)
+
+        # Ensure workflow exists
+        ensure_workflow_for_object(assessment)
+
+        # Check transitions
+        transitions = get_available_transitions(user, assessment)
+        transition = next(
+            (t for t in transitions if t.to_state.name.lower() == "review"),
+            None,
         )
-        wf_obj = WorkflowObject.objects.get_for_model(assessment)
 
-        next_state = wf_obj.workflow.states.filter(name="Review").first()
-        if not next_state:
-            return False, "Review state not found."
+        if not transition:
+            return False, "No valid transition to 'Review' available."
 
-        wf_obj.current_state = next_state
-        wf_obj.save()
-
-        return True, "Assessment moved to review."
-
+        apply_transition(user, assessment, transition, comment="Submitted for review.")
+        return True, "Assessment submitted for review."
+    except Assessment.DoesNotExist:
+        return False, "Assessment not found."
     except Exception as e:
-        return False, f"Workflow error: {str(e)}"
+        return False, str(e)
 
 
 # ===========================

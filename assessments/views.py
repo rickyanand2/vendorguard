@@ -5,12 +5,16 @@ from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponseBadRequest
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 
 from .models import Assessment, Questionnaire, Question, VendorOffering, Vendor
+from workflow.models import WorkflowObject, WorkflowLog  # Workflow import
 
 from .forms import AssessmentForm, QuestionnaireForm, QuestionForm
+from services.workflow import ensure_workflow_for_object
 from services.assessments import (
     get_assessments_for_org,
     create_assessment_from_request,
@@ -109,15 +113,30 @@ class AssessmentCreateView(LoginRequiredMixin, View):
 # ====================================================
 class AssessmentDetailView(LoginRequiredMixin, DetailView):
     model = Assessment
-    context_object_name = "assessment"
     template_name = "assessments/assessment_detail.html"
+    context_object_name = "assessment"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        detail_context = get_assessment_detail(
-            self.object.id, self.request.user.organization
-        )
-        context.update(detail_context)
+        assessment = self.object
+
+        try:
+            # Auto-create workflow if missing
+            ensure_workflow_for_object(assessment)
+
+            content_type = ContentType.objects.get_for_model(assessment.__class__)
+            wf_obj = WorkflowObject.objects.get(
+                content_type=content_type, object_id=assessment.pk
+            )
+            context["workflow_object"] = wf_obj
+            context["workflow_logs"] = WorkflowLog.objects.filter(
+                workflow_object=wf_obj
+            ).select_related("user", "from_state", "to_state")
+        except Exception as e:
+            context["workflow_object"] = None
+            context["workflow_logs"] = []
+            print(f"[Workflow Attach Error]: {e}")
+
         return context
 
 

@@ -1,8 +1,10 @@
+# dashboard/urls.py
 from django.urls import path
-from . import views
+from .views import UserDashboardView, DashboardStatsView
 
 app_name = "dashboard"
 
 urlpatterns = [
-    path("", views.user_dashboard, name="dashboard"),
+    path("", UserDashboardView.as_view(), name="dashboard"),
+    path("data/", DashboardStatsView.as_view(), name="dashboard_data"),
 ]

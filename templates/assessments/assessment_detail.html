@@ -1,20 +1,118 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
   <div class="container mt-4">
-    <h2>Assessment Detail</h2>
-    <p>
-      <strong>Vendor Offering:</strong> {{ assessment.vendor_offering.name }}
-    </p>
-    <p>
-      <strong>Status:</strong> {{ assessment.get_status_display }}
-    </p>
-    <p>
-      <strong>Info Value:</strong> {{ assessment.get_information_value_display }}
-    </p>
-    <p>
-      <strong>Risk Level:</strong> {{ assessment.get_risk_level_display }}
-    </p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      {% if workflow_object %}
+        <div class="alert alert-info">
+          <strong>Current Workflow Stage:</strong> {{ workflow_object.current_state.name }}
+        </div>
 
-    <a href="{% url 'assessments:answer' assessment.pk %}" class="btn btn-primary mt-3">Answer Questionnaire</a>
+        <!-- Optional: Transition Button -->
+        {% if workflow_object.current_state.name == 'Draft' %}
+          <form method="post" action="{% url 'assessments:submit_for_review' assessment.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-warning">Submit for Review</button>
+          </form>
+        {% endif %}
+      {% else %}
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> No workflow attached to this assessment.
+        </div>
+      {% endif %}
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>📝 Assessment: {{ assessment.vendor_offering.name }}</h2>
+      {% if assessment.status == 'draft' %}
+        <form method="post" action="{% url 'assessments:submit_for_review' assessment.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-warning">Submit for Review</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if workflow_logs %}
+      <div class="card mt-4">
+        <div class="card-header">🕓 Transition History</div>
+        <div class="card-body p-0">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>User</th>
+                <th>Time</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in workflow_logs %}
+                <tr>
+                  <td>
+                    {% if log.from_state %}
+                      {{ log.from_state.name }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+                  <td>{{ log.to_state.name }}</td>
+                  <td>{{ log.user.get_full_name }}</td>
+                  <td>{{ log.timestamp|date:'M d, Y H:i' }}</td>
+                  <td>{{ log.comment|default:'—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <p>
+          <strong>Status:</strong> {{ assessment.get_status_display }}
+        </p>
+        <p>
+          <strong>Info Value:</strong> {{ assessment.get_information_value_display }}
+        </p>
+        <p>
+          <strong>Risk Level:</strong> {{ assessment.get_risk_level_display }}
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <strong>📋 Questionnaire Responses</strong>
+      </div>
+      <div class="card-body">
+        {% if answers %}
+          <ul class="list-group">
+            {% for answer in answers %}
+              <li class="list-group-item">
+                <p>
+                  <strong>Q:</strong> {{ answer.question.text }}
+                </p>
+                <p>
+                  <strong>A:</strong> {{ answer.response }}
+                </p>
+                {% if answer.supporting_text %}
+                  <p>
+                    <em>Note:</em> {{ answer.supporting_text }}
+                  </p>
+                {% endif %}
+                {% if answer.evidence %}
+                  <p>
+                    <strong>Evidence:</strong>
+                    <a href="{{ answer.evidence.url }}" target="_blank">View File</a>
+                  </p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted">No answers submitted yet.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 {% endblock %}

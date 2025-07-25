@@ -1,11 +1,102 @@
 {% extends 'base.html' %}
-{% block title %}
-  Dashboard
-{% endblock %}
+{% load static %}
 
 {% block content %}
-  <div class="container py-5">
-    <h2 class="mb-4">Welcome back, {{ user.full_name|default:user.email }}!</h2>
-    <p class="text-muted">This will become your centralized risk management dashboard.</p>
+  <div class="container py-4">
+    <h2 class="mb-4">📊 VendorGuard Dashboard</h2>
+
+    <!-- Stats Table -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Assessment Stats</h5>
+        <table class="table table-hover mt-3 mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Metric</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Vendors</td>
+              <td id="vendors-count">Loading...</td>
+            </tr>
+            <tr>
+              <td>Total Offerings</td>
+              <td id="offerings-count">Loading...</td>
+            </tr>
+            <tr>
+              <td>Completed Assessments</td>
+              <td id="assessments-count">Loading...</td>
+            </tr>
+            <tr>
+              <td>Average Trust Score</td>
+              <td id="avg-score">Loading...</td>
+            </tr>
+            <tr>
+              <td>High-Risk Vendors</td>
+              <td id="high-risk">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Risk Breakdown Chart -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Vendor Risk Breakdown</h5>
+        <canvas id="riskChart" height="150"></canvas>
+      </div>
+    </div>
   </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch("{% url 'dashboard:dashboard_data' %}")
+        .then((res) => res.json())
+        .then((data) => {
+          // Update Stats
+          document.getElementById('vendors-count').textContent = data.total_vendors
+          document.getElementById('offerings-count').textContent = data.total_offerings
+          document.getElementById('assessments-count').textContent = data.total_assessments
+          document.getElementById('avg-score').textContent = data.average_score
+          document.getElementById('high-risk').textContent = data.high_risk_vendors
+    
+          // Placeholder: logic to calculate low/medium/high risk counts
+          const high = data.high_risk_vendors
+          const total = data.total_vendors
+          const low = Math.floor(total * 0.3) // simulated
+          const medium = total - high - low
+    
+          // Render Chart
+          const ctx = document.getElementById('riskChart').getContext('2d')
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+              datasets: [
+                {
+                  label: '# Vendors',
+                  data: [low, medium, high],
+                  backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                  borderWidth: 1
+                }
+              ]
+            },
+            options: {
+              scales: {
+                y: { beginAtZero: true }
+              },
+              plugins: {
+                legend: { display: false }
+              }
+            }
+          })
+        })
+    })
+  </script>
 {% endblock %}

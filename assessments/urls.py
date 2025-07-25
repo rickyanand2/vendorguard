@@ -55,4 +55,9 @@ urlpatterns = [
     path("<int:pk>/", AssessmentDetailView.as_view(), name="detail"),
     path("<int:pk>/submit/", SubmitAssessmentForReviewView.as_view(), name="submit"),
     path("<int:pk>/answer/", AnswerQuestionnaireView.as_view(), name="answer"),
+    path(
+        "assessments/<int:pk>/submit/",
+        SubmitAssessmentForReviewView.as_view(),
+        name="submit_for_review",
+    ),
 ]

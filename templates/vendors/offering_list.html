@@ -1,3 +1,4 @@
+{# vendors/templates/vendors/offering_list.html #}
 {% extends 'base.html' %}
 
 {% block content %}
@@ -17,7 +18,7 @@
               <th>Risk Score</th>
               <th>Offering Type</th>
               <th>Created</th>
-              <th style="width: 120px;">Actions</th>
+              <th style="width: 160px;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -30,15 +31,37 @@
                 <td>
                   <a href="{% url 'vendors:vendor_detail' offering.vendor.id %}">{{ offering.vendor.name }}</a>
                 </td>
-                <td>{{ offering.risk_score|default:'–' }}</td>
-                <td>{{ offering.get_offering_type_display }}</td>
-                <td>{{ offering.created_at|date:'M d, Y' }}</td>
                 <td>
-                  <a href="{% url 'vendors:offering_detail' offering.id %}" class="btn btn-sm btn-outline-primary">View</a>
-                  <a href="{% url 'vendors:offering_edit' offering.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit</a>
-                  <a href="{% url 'assessments:create' %}?offering_id={{ offering.id }}" class="btn btn-primary">+ Do Assessment</a>
-
-                  <!-- Archive or Delete can be added with POST/confirmation later -->
+                  {% if offering.risk_score %}
+                    {% if offering.risk_score >= 75 %}
+                      <span class="text-danger fw-bold">{{ offering.risk_score }}</span>
+                    {% elif offering.risk_score >= 40 %}
+                      <span class="text-warning fw-semibold">{{ offering.risk_score }}</span>
+                    {% else %}
+                      <span class="text-success">{{ offering.risk_score }}</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">–</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if offering.offering_type == 'product' %}
+                    <span class="badge bg-primary">Product</span>
+                  {% elif offering.offering_type == 'service' %}
+                    <span class="badge bg-success">Service</span>
+                  {% elif offering.offering_type == 'integration' %}
+                    <span class="badge bg-warning text-dark">Integration</span>
+                  {% else %}
+                    {{ offering.get_offering_type_display }}
+                  {% endif %}
+                </td>
+                <td title="{{ offering.created_at }}">{{ offering.created_at|date:'M d, Y' }}</td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    <a href="{% url 'vendors:offering_detail' offering.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                    <a href="{% url 'vendors:offering_update' offering.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit</a>
+                    <a href="{% url 'assessments:create' %}?offering_id={{ offering.id }}" class="btn btn-sm btn-primary">+ Do Assessment</a>
+                  </div>
                 </td>
               </tr>
             {% endfor %}
@@ -46,44 +69,48 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-          {% if offerings.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ offerings.previous_page_number }}">Previous</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled">
-              <span class="page-link">Previous</span>
-            </li>
-          {% endif %}
-
-          {% for num in offerings.paginator.page_range %}
-            {% if offerings.number == num %}
-              <li class="page-item active">
-                <span class="page-link">{{ num }}</span>
-              </li>
-            {% elif num > offerings.number|add:'-3' and num < offerings.number|add:'3' %}
+      {% if offerings.has_other_pages %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            {% if offerings.has_previous %}
               <li class="page-item">
-                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                <a class="page-link" href="?page={{ offerings.previous_page_number }}">Previous</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Previous</span>
               </li>
             {% endif %}
-          {% endfor %}
 
-          {% if offerings.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ offerings.next_page_number }}">Next</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled">
-              <span class="page-link">Next</span>
-            </li>
-          {% endif %}
-        </ul>
-      </nav>
+            {% for num in offerings.paginator.page_range %}
+              {% if offerings.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > offerings.number|add:'-3' and num < offerings.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if offerings.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ offerings.next_page_number }}">Next</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Next</span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
     {% else %}
-      <p class="text-muted">No offerings found.</p>
+      <div class="text-center my-5">
+        <p class="text-muted mb-3">No offerings found.</p>
+        <a href="{% url 'vendors:vendor_list' %}" class="btn btn-primary">Add Vendor Offering</a>
+      </div>
     {% endif %}
   </div>
 {% endblock %}

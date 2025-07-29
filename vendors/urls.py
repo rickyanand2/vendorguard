@@ -1,28 +1,48 @@
 # vendors/urls.py
 
 from django.urls import path
-from vendors import views
-from vendors.views import VendorViews, VendorOfferingViews
+from vendors.views import (
+    VendorListView,
+    VendorDetailView,
+    VendorCreateView,
+    VendorUpdateView,
+    VendorArchiveView,
+    VendorOfferingListView,
+    VendorOfferingCreateView,
+    VendorOfferingUpdateView,
+    VendorOfferingDetailView,
+    VendorOfferingArchiveView,
+)
 
 app_name = "vendors"
 
 urlpatterns = [
-    path("", VendorViews.list, name="vendor_list"),
-    path("add/", VendorViews.create, name="vendor_add"),
-    path("<int:pk>/", VendorViews.detail, name="vendor_detail"),
-    path("<int:pk>/edit/", VendorViews.update, name="vendor_edit"),
-    path("<int:pk>/archive/", VendorViews.archive, name="vendor_archive"),
-    path("offerings/", VendorOfferingViews.list, name="offering_list"),
+    # ──────────────── Vendor Views ────────────────
+    path("", VendorListView.as_view(), name="vendor_list"),
+    path("new/", VendorCreateView.as_view(), name="vendor_create"),
+    path("<int:pk>/", VendorDetailView.as_view(), name="vendor_detail"),
+    path("<int:pk>/edit/", VendorUpdateView.as_view(), name="vendor_update"),
+    path("<int:pk>/archive/", VendorArchiveView.as_view(), name="vendor_archive"),
+    # ───────────── Vendor Offering Views ─────────────
+    path("offerings/", VendorOfferingListView.as_view(), name="offering_list"),
     path(
-        "vendors/<int:vendor_id>/offerings/add/",
-        VendorOfferingViews.create,
-        name="offering_add",
+        "offerings/new/<int:vendor_id>/",
+        VendorOfferingCreateView.as_view(),
+        name="offering_create",
     ),
-    path("offerings/<int:pk>/edit/", VendorOfferingViews.update, name="offering_edit"),
-    path("offerings/<int:pk>/", VendorOfferingViews.detail, name="offering_detail"),
+    path(
+        "offerings/<int:pk>/",
+        VendorOfferingDetailView.as_view(),
+        name="offering_detail",
+    ),
+    path(
+        "offerings/<int:pk>/edit/",
+        VendorOfferingUpdateView.as_view(),
+        name="offering_update",
+    ),
     path(
         "offerings/<int:pk>/archive/",
-        VendorOfferingViews.archive,
+        VendorOfferingArchiveView.as_view(),
         name="offering_archive",
     ),
 ]

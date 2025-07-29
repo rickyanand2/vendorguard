@@ -1,57 +1,59 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
   <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="mb-0">Vendors</h2>
-      <a href="{% url 'vendors:vendor_add' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Add Vendor</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-bold">Vendors</h2>
+      <a href="{% url 'vendors:vendor_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Add Vendor</a>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover align-middle">
-        <thead class="table-light">
+    <table class="table table-bordered table-hover align-middle bg-white shadow-sm">
+      <thead class="table-light">
+        <tr>
+          <th>Vendor Name</th>
+          <th>Trust Score</th>
+          <th>Vendor Offerings</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vendor in vendors %}
           <tr>
-            <th scope="col">Vendor Name</th>
-            <th scope="col">Trust Score</th>
-            <th scope="col">Vendor Offerings</th>
-            <th scope="col">Actions</th>
+            <td>
+              <a href="{% url 'vendors:vendor_detail' vendor.pk %}" class="text-decoration-none fw-medium">{{ vendor.name }}</a>
+            </td>
+            <td>
+              {% if vendor.trust_profile.trust_score %}
+                <span class="badge bg-dark text-light">{{ vendor.trust_profile.trust_score }}</span>
+              {% else %}
+                <span class="badge bg-secondary">–</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if vendor.offerings.exists %}
+                <div class="mb-2">
+                  {% for offering in vendor.offerings.all %}
+                    <span class="badge bg-primary text-light me-1 mb-1">{{ offering.name }}</span>
+                  {% endfor %}
+                </div>
+                <a href="{% url 'vendors:offering_create' vendor.id %}" class="btn btn-sm btn-outline-secondary">+ Add More</a>
+              {% else %}
+                <span class="text-muted">No offerings</span><br />
+                <a href="{% url 'vendors:offering_create' vendor.id %}" class="btn btn-sm btn-success mt-1">+ Add First</a>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              <a href="{% url 'vendors:vendor_detail' vendor.pk %}" class="btn btn-outline-dark btn-sm me-1"><i class="bi bi-eye"></i> View</a>
+              <a href="{% url 'vendors:vendor_update' vendor.pk %}" class="btn btn-outline-primary btn-sm me-1"><i class="bi bi-pencil"></i> Edit</a>
+              <form method="POST" action="{% url 'vendors:vendor_archive' vendor.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to archive this vendor?');"><i class="bi bi-archive"></i> Archive</button>
+              </form>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {% for vendor in vendors %}
-            <tr>
-              <td class="fw-semibold">{{ vendor.name }}</td>
-              <td>{{ vendor.trust_profile.trust_score|default:'-' }}</td>
-
-              <td>
-                {% if vendor.offerings.exists %}
-                  <ul class="mb-0 ps-3">
-                    {% for offering in vendor.offerings.all %}
-                      <li>
-                        <strong>{{ offering.name }}</strong> – {{ offering.description|truncatewords:10 }}
-                      </li>
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <em>No offerings provided.</em>
-                {% endif %}
-              </td>
-              <!-- ACTION BUTTONS -->
-
-              <td>
-                <div class="d-flex gap-2 mb-3">
-                  <a href="{% url 'vendors:vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-secondary">View Vendor</a>
-                  <a href="{% url 'vendors:vendor_edit' vendor.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit Vendor</a>
-                  <a href="{% url 'vendors:vendor_archive' vendor.id %}" class="btn btn-outline-danger"><i class="bi bi-archive"></i> Archive</a>
-                </div>
-                <div class="flex-wrap">
-                  <a href="{% url 'vendors:offering_add' vendor.id %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Offering</a>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 {% endblock %}

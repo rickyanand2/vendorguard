@@ -1,39 +1,69 @@
 {% extends 'base.html' %}
+{% load form_tags %}
 
 {% block content %}
-  <div class="container mt-5">
-    <div class="row justify-content-center">
-      <div class="col-lg-8">
-        <div class="card shadow-sm border-0">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Offering for {{ vendor.name }}</h5>
-          </div>
+  <div class="container mt-4">
+    <h2 class="mb-4">
+      {% if form.instance.pk %}
+        Edit Offering
+      {% else %}
+        Add Offering
+      {% endif %}
+    </h2>
 
-          <div class="card-body">
-            <form method="post" novalidate>
-              {% csrf_token %}
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
 
-              {% for field in form %}
-                <div class="mb-3">
-                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}
-                    <div class="form-text">{{ field.help_text }}</div>
-                  {% endif %}
-                  {% if field.errors %}
-                    <div class="text-danger small">{{ field.errors|striptags }}</div>
-                  {% endif %}
-                </div>
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          <strong>There were errors:</strong>
+          <ul class="mb-0">
+            {% for field, errors in form.errors.items %}
+              {% for error in errors %}
+                <li>{{ field|capfirst }}: {{ error }}</li>
               {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      {% if vendor %}
+        <div class="mb-3">
+          <label class="form-label"><strong>Vendor: {{ vendor.name }}</strong></label>
+        </div>
+      {% endif %}
+      <!-- Offering Info Section -->
+      <div class="p-4 border rounded bg-light mb-4">
+        <h4 class="mb-3 border-bottom pb-2"><i class="bi bi-box-seam me-1"></i> Offering Details</h4>
 
-              <div class="d-flex justify-content-between mt-4">
-                <a href="{% url 'vendors:vendor_detail' vendor.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Cancel</a>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Offering</button>
-              </div>
-            </form>
-          </div>
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.name.label_tag }} {{ form.name }}</div>
+          <div class="col-md-6">{{ form.offering_type.label_tag }} {{ form.offering_type }}</div>
+          <div class="col-12">{{ form.description.label_tag }} {{ form.description }}</div>
         </div>
       </div>
-    </div>
+
+      <!-- Data Handling Section -->
+      <div class="p-4 border rounded bg-light mb-4">
+        <h4 class="mb-3 border-bottom pb-2"><i class="bi bi-hdd-network me-1"></i> Data & Hosting</h4>
+
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.data_location.label_tag }} {{ form.data_location }}</div>
+          <div class="col-md-6">{{ form.hosting_provider.label_tag }} {{ form.hosting_provider }}</div>
+          <div class="col-md-6">{{ form.hosting_type.label_tag }} {{ form.hosting_type }}</div>
+
+          <div class="col-md-6 form-check mt-2">{{ form.stores_data }} {{ form.stores_data.label_tag }}</div>
+          <div class="col-md-6 form-check mt-2">{{ form.processes_pii }} {{ form.processes_pii.label_tag }}</div>
+          <div class="col-md-6 form-check mt-2">{{ form.transmits_data }} {{ form.transmits_data.label_tag }}</div>
+
+          <div class="col-12">{{ form.data_types_handled.label_tag }} {{ form.data_types_handled }}</div>
+        </div>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
+        <a href="{% url 'vendors:vendor_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
   </div>
 {% endblock %}

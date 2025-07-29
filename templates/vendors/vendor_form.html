@@ -10,23 +10,15 @@
   <form method="post" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
 
-    {% if form.errors %}
+    {% if form.errors or trust_form.errors %}
       <div class="alert alert-danger">
-        <strong>Vendor Info Errors:</strong>
+        <strong>There were errors:</strong>
         <ul class="mb-0">
           {% for field, errors in form.errors.items %}
             {% for error in errors %}
               <li>{{ field|capfirst }}: {{ error }}</li>
             {% endfor %}
           {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
-    {% if trust_form.errors %}
-      <div class="alert alert-danger">
-        <strong>Trust Profile Errors:</strong>
-        <ul class="mb-0">
           {% for field, errors in trust_form.errors.items %}
             {% for error in errors %}
               <li>{{ field|capfirst }}: {{ error }}</li>
@@ -36,36 +28,20 @@
       </div>
     {% endif %}
 
-<!-- Top Vendor Info Section -->
-<div class="p-4 border rounded bg-light mb-4" >
-  <h4 class="mb-3 border-bottom pb-2">
-    <i class="bi bi-building me-1"></i> Vendor Info
-  </h4>
+    <!-- Vendor Info Section -->
+    <div class="p-4 border rounded bg-light mb-4">
+      <h4 class="mb-3 border-bottom pb-2">
+        <i class="bi bi-building me-1"></i> Vendor Info
+      </h4>
 
-<div class="row g-3">
-  <div class="col-md-6">
-    {{ form.name.label_tag }} {{ form.name }}
-  </div>
-  <div class="col-md-6">
-    {{ form.industry.label_tag }} {{ form.industry }}
-  </div>
-  <div class="col-md-6">
-    {{ form.contact_email.label_tag }} {{ form.contact_email }}
-  </div>
-  <div class="col-md-6">
-    {{ form.website.label_tag }} {{ form.website }}
-  </div>
-  <div class="col-12">
-    {{ form.description.label_tag }} {{ form.description }}
-  </div>
-</div>
-
-
-  
-  
-</div>
-
-   
+      <div class="row g-3">
+        <div class="col-md-6">{{ form.name.label_tag }} {{ form.name }}</div>
+        <div class="col-md-6">{{ form.industry.label_tag }} {{ form.industry }}</div>
+        <div class="col-md-6">{{ form.contact_email.label_tag }} {{ form.contact_email }}</div>
+        <div class="col-md-6">{{ form.website.label_tag }} {{ form.website }}</div>
+        <div class="col-12">{{ form.description.label_tag }} {{ form.description }}</div>
+      </div>
+    </div>
 
     <!-- Trust Profile Section -->
     {% if trust_form %}
@@ -100,9 +76,7 @@
         </div>
       </div>
 
-      <div class="mt-3">
-        {% form_field trust_form.notes %}
-      </div>
+      <div class="mt-3">{% form_field trust_form.notes %}</div>
     </div>
     {% endif %}
 
@@ -122,9 +96,7 @@
             <div>{% form_field form.artifact %}</div>
             <div>{% form_field form.external_url %}</div>
           </div>
-          <div class="mt-3">
-            {% form_field form.notes %}
-          </div>
+          <div class="mt-3">{% form_field form.notes %}</div>
           {% if form.DELETE %}
             <div class="mt-2 form-check">
               {{ form.DELETE }} <label class="form-check-label">Delete this certification</label>
@@ -137,7 +109,7 @@
 
     <!-- Submit Buttons -->
     <div class="mt-4 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
       <a href="{% url 'vendors:vendor_list' %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>

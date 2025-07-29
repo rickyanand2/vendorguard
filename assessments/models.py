@@ -1,7 +1,8 @@
 # assessments/models.py
 
 from django.db import models
-from vendors.models import Vendor, VendorOffering, cert_artifact_path
+from vendors.models import Vendor, VendorOffering
+from trust.utils import cert_artifact_path
 from accounts.models import Organization
 from common.models import TimeStampedModel
 from taggit.managers import TaggableManager

@@ -10,72 +10,232 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('accounts', '0001_initial'),
-        ('vendors', '0001_initial'),
+        ("accounts", "0001_initial"),
+        ("vendors", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Questionnaire',
+            name="Questionnaire",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Assessment',
+            name="Assessment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('submitted', 'Submitted'), ('reviewed', 'Reviewed')], default='draft', max_length=20)),
-                ('score', models.FloatField(default=0.0, help_text='Overall score after assessment completion')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.organization')),
-                ('vendor_offering', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='assessments', to='vendors.vendoroffering')),
-                ('questionnaire', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='assessments.questionnaire')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("submitted", "Submitted"),
+                            ("reviewed", "Reviewed"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "score",
+                    models.FloatField(
+                        default=0.0,
+                        help_text="Overall score after assessment completion",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="accounts.organization",
+                    ),
+                ),
+                (
+                    "vendor_offering",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="assessments",
+                        to="vendors.vendoroffering",
+                    ),
+                ),
+                (
+                    "questionnaire",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="assessments.questionnaire",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='Certification',
+            name="Certification",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('type', models.CharField(choices=[('GDPR', 'GDPR'), ('ISO_27001', 'ISO 27001'), ('SOC2', 'SOC 2 Type 2'), ('PCI_DSS', 'PCI DSS'), ('IRAP', 'IRAP')], max_length=50)),
-                ('issued_date', models.DateField(blank=True, null=True)),
-                ('expiry_date', models.DateField(blank=True, null=True)),
-                ('cert_number', models.CharField(blank=True, max_length=255)),
-                ('notes', models.TextField(blank=True)),
-                ('artifact', models.FileField(blank=True, help_text='Optional: Upload certification file', null=True, upload_to=vendors.models.cert_artifact_path)),
-                ('external_url', models.URLField(blank=True)),
-                ('vendor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='certifications', to='vendors.vendor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("GDPR", "GDPR"),
+                            ("ISO_27001", "ISO 27001"),
+                            ("SOC2", "SOC 2 Type 2"),
+                            ("PCI_DSS", "PCI DSS"),
+                            ("IRAP", "IRAP"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("issued_date", models.DateField(blank=True, null=True)),
+                ("expiry_date", models.DateField(blank=True, null=True)),
+                ("cert_number", models.CharField(blank=True, max_length=255)),
+                ("notes", models.TextField(blank=True)),
+                (
+                    "artifact",
+                    models.FileField(
+                        blank=True,
+                        help_text="Optional: Upload certification file",
+                        null=True,
+                        upload_to="certifications/",
+                    ),
+                ),
+                ("external_url", models.URLField(blank=True)),
+                (
+                    "vendor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="certifications",
+                        to="vendors.vendor",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Question',
+            name="Question",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('response_type', models.CharField(choices=[('choice', 'Choice (Yes/No/etc.)'), ('text', 'Text Only'), ('choice+text', 'Choice with Explanation')], default='choice', help_text='Controls how the question is displayed and answered.', max_length=20)),
-                ('text', models.TextField()),
-                ('help_text', models.CharField(blank=True, max_length=255)),
-                ('weight', models.IntegerField(default=1, help_text='Used in risk scoring calculations')),
-                ('questionnaire', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='assessments.questionnaire')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "response_type",
+                    models.CharField(
+                        choices=[
+                            ("choice", "Choice (Yes/No/etc.)"),
+                            ("text", "Text Only"),
+                            ("choice+text", "Choice with Explanation"),
+                        ],
+                        default="choice",
+                        help_text="Controls how the question is displayed and answered.",
+                        max_length=20,
+                    ),
+                ),
+                ("text", models.TextField()),
+                ("help_text", models.CharField(blank=True, max_length=255)),
+                (
+                    "weight",
+                    models.IntegerField(
+                        default=1, help_text="Used in risk scoring calculations"
+                    ),
+                ),
+                (
+                    "questionnaire",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="assessments.questionnaire",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Answer',
+            name="Answer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('response', models.TextField()),
-                ('answer', models.CharField(choices=[('yes', 'Yes'), ('no', 'No'), ('partial', 'Partially'), ('n/a', 'Not Applicable')], max_length=10)),
-                ('comments', models.TextField(blank=True, help_text='Optional justification or context')),
-                ('risk_impact', models.FloatField(default=0.0, help_text='Custom risk value (0.0–1.0 scale)')),
-                ('assessment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='answers', to='assessments.assessment')),
-                ('question', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='assessments.question')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("response", models.TextField()),
+                (
+                    "answer",
+                    models.CharField(
+                        choices=[
+                            ("yes", "Yes"),
+                            ("no", "No"),
+                            ("partial", "Partially"),
+                            ("n/a", "Not Applicable"),
+                        ],
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "comments",
+                    models.TextField(
+                        blank=True, help_text="Optional justification or context"
+                    ),
+                ),
+                (
+                    "risk_impact",
+                    models.FloatField(
+                        default=0.0, help_text="Custom risk value (0.0–1.0 scale)"
+                    ),
+                ),
+                (
+                    "assessment",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="answers",
+                        to="assessments.assessment",
+                    ),
+                ),
+                (
+                    "question",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="assessments.question",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('assessment', 'question')},
+                "unique_together": {("assessment", "question")},
             },
         ),
     ]

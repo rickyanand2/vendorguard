@@ -1,3 +1,4 @@
+{# vendors/templates/vendors/offering_detail.html #}
 {% extends 'base.html' %}
 
 {% block content %}
@@ -6,23 +7,91 @@
       <div class="col-lg-10">
         <div class="card shadow-sm border-0">
           <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Offering Detail: {{ offering.name }}</h5>
-            <a href="{% url 'vendors:offering_edit' offering.id %}" class="btn btn-sm btn-light">Edit</a>
+            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Offering: {{ offering.name }}</h5>
+            <a href="{% url 'vendors:offering_update' offering.id %}" class="btn btn-sm btn-light"><i class="bi bi-pencil-square"></i> Edit</a>
           </div>
+
           <div class="card-body">
             <p>
-              <strong>Description:</strong> {{ offering.description }}
-            </p>
-            <p>
-              <strong>Type:</strong> {{ offering.get_offering_type_display }}
+              <strong>Description:</strong><br /> {{ offering.description|default:'—' }}
             </p>
             <p>
               <strong>Vendor:</strong>
               <a href="{% url 'vendors:vendor_detail' offering.vendor.id %}">{{ offering.vendor.name }}</a>
             </p>
             <p>
-              <strong>Risk Score:</strong> {{ offering.risk_score|default:'—' }}
+              <strong>Type:</strong>
+              <span class="badge bg-secondary">{{ offering.get_offering_type_display }}</span>
             </p>
+
+            <hr />
+            <p>
+              <strong>Risk Score:</strong>
+              {% if offering.risk_score %}
+                {% if offering.risk_score >= 75 %}
+                  <span class="text-danger fw-bold">{{ offering.risk_score }}</span>
+                {% elif offering.risk_score >= 40 %}
+                  <span class="text-warning fw-semibold">{{ offering.risk_score }}</span>
+                {% else %}
+                  <span class="text-success">{{ offering.risk_score }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">Not calculated</span>
+              {% endif %}
+            </p>
+
+            <p>
+              <strong>Data Storage Location:</strong> {{ offering.data_location|default:'—' }}
+            </p>
+            <p>
+              <strong>Hosting Provider:</strong> {{ offering.hosting_provider|default:'—' }}
+            </p>
+            <p>
+              <strong>Hosting Type:</strong> {{ offering.get_hosting_type_display|default:'—' }}
+            </p>
+
+            <hr />
+            <p>
+              <strong>Data Characteristics:</strong>
+            </p>
+            <ul class="list-unstyled ms-3">
+              <li>
+                {% if offering.stores_data %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Stores Data
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Store Data
+                {% endif %}
+              </li>
+              <li>
+                {% if offering.processes_pii %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Processes PII
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Process PII
+                {% endif %}
+              </li>
+              <li>
+                {% if offering.transmits_data %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Transmits Data
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Transmit Data
+                {% endif %}
+              </li>
+            </ul>
+
+            {% if offering.data_types_handled %}
+              <p>
+                <strong>Data Types Handled:</strong>
+              </p>
+              <ul class="list-inline">
+                {% for dtype in offering.data_types_handled %}
+                  <li class="list-inline-item">
+                    <span class="badge bg-info text-dark">{{ dtype }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            <hr />
             <p>
               <strong>Created:</strong> {{ offering.created_at|date:'M d, Y' }}
             </p>
@@ -30,6 +99,7 @@
               <strong>Last Updated:</strong> {{ offering.updated_at|date:'M d, Y' }}
             </p>
           </div>
+
           <div class="card-footer text-end">
             <a href="{% url 'vendors:offering_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Offerings</a>
           </div>

@@ -1,4 +1,5 @@
 # Ruff Configuration for Django (Vendorguard)
+exclude = ["*/migrations/*"]
 line-length = 100
 target-version = "py311"
 

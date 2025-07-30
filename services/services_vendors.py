@@ -8,9 +8,7 @@ from trust.engine import calculate_vendor_trust_score
 
 
 def create_vendor_with_trust(user, vendor_form, trust_form):
-    """Creates a vendor and trust profile, assigns org and creator,
-    calculates initial trust score.
-    """
+    """Creates a vendor trust profile, assigns org and creator, calculates initial trust score."""
     vendor = vendor_form.save(commit=False)
     vendor.organization = user.organization
     vendor.created_by = user
@@ -18,25 +16,35 @@ def create_vendor_with_trust(user, vendor_form, trust_form):
 
     trust = trust_form.save(commit=False)
     trust.vendor = vendor
-    trust.trust_score = calculate_vendor_trust_score(vendor)
-    trust.save()
 
+    try:
+        score = calculate_vendor_trust_score(vendor)
+        trust.trust_score = score if score is not None else 0
+    except Exception as e:
+        trust.trust_score = 0  # Or log error
+
+    trust.save()
     return vendor
 
 
 def update_vendor_with_trust(vendor, vendor_form, trust_form):
-    """Updates vendor and trust profile and recalculates trust score.
-    """
-    vendor_form.save()
+    """Updates vendor and trust profile and recalculates trust score."""
+    vendor = vendor_form.save(commit=False)
+    vendor.save()
+
     trust = trust_form.save(commit=False)
-    trust.trust_score = calculate_vendor_trust_score(vendor)
+    trust.vendor = vendor  # Ensure link is consistent
+
+    # Always recalculate score
+    score = calculate_vendor_trust_score(vendor)
+    trust.trust_score = score if score is not None else 0
+
     trust.save()
     return vendor
 
 
 def archive_vendor(vendor):
-    """Archives (soft-deletes) a vendor.
-    """
+    """Archives (soft-deletes) a vendor."""
     vendor.archived = True
     vendor.save()
 
@@ -47,8 +55,7 @@ def archive_vendor(vendor):
 
 
 def create_vendor_offering(vendor, user, form):
-    """Creates a new offering for the vendor.
-    """
+    """Creates a new offering for the vendor."""
     offering = form.save(commit=False)
     offering.vendor = vendor
     offering.created_by = user
@@ -57,14 +64,12 @@ def create_vendor_offering(vendor, user, form):
 
 
 def update_vendor_offering(offering, form):
-    """Updates an existing offering.
-    """
+    """Updates an existing offering."""
     return form.save()
 
 
 def archive_vendor_offering(offering):
-    """Archives (soft-deletes) a vendor offering.
-    """
+    """Archives (soft-deletes) a vendor offering."""
     offering.archived = True
     offering.save()
 
@@ -75,8 +80,7 @@ def archive_vendor_offering(offering):
 
 
 def update_vendor_score(vendor):
-    """Recalculates and updates the vendor's trust score based on all assessed offerings.
-    """
+    """Recalculates and updates the vendor's trust score based on all assessed offerings."""
     trust_profile = vendor.trust_profile
     new_score = calculate_vendor_trust_score(vendor)
 

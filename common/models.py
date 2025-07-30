@@ -5,6 +5,8 @@ from django.db import models
 
 
 class TimeStampedModel(models.Model):
+    """Class for putting in timestamps for model classes"""
+
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -28,6 +30,8 @@ class TimeStampedModel(models.Model):
 
 #### Taxonomy Models ######
 class DataType(models.Model):
+    """Different Data Types for use in Vendor model and others"""
+
     code = models.CharField(max_length=20, unique=True)
     label = models.CharField(max_length=255)
     risk_score = models.PositiveIntegerField(default=0)
@@ -39,4 +43,5 @@ class DataType(models.Model):
         ordering = ["label"]
 
     def __str__(self):
+        """String representation of the model."""
         return self.label

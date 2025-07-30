@@ -2,6 +2,8 @@
 
 
 def calculate_vendor_trust_score(vendor):
+    """Assigns a trust score to vendor"""
+
     offerings = vendor.offerings.filter(archived=False)
     scores = []
 

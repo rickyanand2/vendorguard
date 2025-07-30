@@ -67,8 +67,7 @@ class AnswerForm(forms.ModelForm):
 
 
 class InlineAnswerForm(forms.ModelForm):
-    """Optional: Used for displaying answers inline with questions (e.g., in HTMX forms)
-    """
+    """Optional: Used for displaying answers inline with questions (e.g., in HTMX forms)."""
 
     class Meta:
         model = Answer

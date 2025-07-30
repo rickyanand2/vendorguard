@@ -9,6 +9,8 @@ from .models import Vendor, VendorTrustProfile
 
 
 class VendorOfferingForm(forms.ModelForm):
+    """Form for creating or editing a Vendor Offering."""
+
     data_types_handled = forms.ModelMultipleChoiceField(
         queryset=DataType.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,  # ✅ checkboxes
@@ -57,6 +59,8 @@ class VendorOfferingForm(forms.ModelForm):
 
 # ---------------- Vendor Form ---------------- #
 class VendorForm(forms.ModelForm):
+    """Form for creating or editing a Vendor."""
+
     class Meta:
         model = Vendor
         fields = ["name", "industry", "contact_email", "website", "description"]
@@ -78,6 +82,8 @@ class VendorForm(forms.ModelForm):
 
 # ---------------- Trust Profile Form ---------------- #
 class VendorTrustProfileForm(forms.ModelForm):
+    """Form for managing Vendor Trust Profiles."""
+
     class Meta:
         model = VendorTrustProfile
         fields = [

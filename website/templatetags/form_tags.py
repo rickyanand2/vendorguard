@@ -14,7 +14,7 @@ def form_field(field):
     """Renders a single Django form field with:
     - Bootstrap 5 label
     - Help text if available
-    - Inline validation errors
+    - Inline validation errors.
     """
     label_html = field.label_tag(attrs={"class": "form-label"})
     field_html = str(field)

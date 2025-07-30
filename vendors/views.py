@@ -15,6 +15,7 @@ from services.services_vendors import (
 )
 from vendors.forms import VendorForm, VendorOfferingForm, VendorTrustProfileForm
 from vendors.models import Vendor, VendorOffering, VendorTrustProfile
+from common.models import DataType
 
 # ─────────────────────────────────────────────
 # 🔹 Vendor Views
@@ -23,8 +24,7 @@ from vendors.models import Vendor, VendorOffering, VendorTrustProfile
 
 @login_required
 def vendor_list(request):
-    """Show all active (non-archived) vendors for the current organization.
-    """
+    """Show all active (non-archived) vendors for the current organization."""
     vendors = (
         Vendor.objects.prefetch_related("offerings")
         .filter(organization=request.user.organization, archived=False)
@@ -36,12 +36,12 @@ def vendor_list(request):
 
 @login_required
 def vendor_detail(request, pk):
-    """Show details of a specific vendor including offerings.
-    """
+    """Show details of a specific vendor including offerings."""
     vendor = get_object_or_404(
         Vendor, pk=pk, organization=request.user.organization, archived=False
     )
-    offerings = vendor.offerings.filter(archived=False)
+    offerings = vendor.offerings.filter(archived=False).exclude(id__isnull=True)
+
     return render(
         request,
         "vendors/vendor_detail.html",
@@ -54,8 +54,7 @@ def vendor_detail(request, pk):
 
 @login_required
 def vendor_create(request):
-    """Create a new vendor with trust profile.
-    """
+    """Create a new vendor with trust profile."""
     if request.method == "POST":
         vendor_form = VendorForm(request.POST)
         trust_form = VendorTrustProfileForm(request.POST)
@@ -81,8 +80,7 @@ def vendor_create(request):
 
 @login_required
 def vendor_update(request, pk):
-    """Update an existing vendor and trust profile.
-    """
+    """Update an existing vendor and trust profile."""
     vendor = get_object_or_404(Vendor, pk=pk, organization=request.user.organization)
     trust_profile, _ = VendorTrustProfile.objects.get_or_create(vendor=vendor)
 
@@ -112,8 +110,7 @@ def vendor_update(request, pk):
 @login_required
 @csrf_protect
 def vendor_archive(request, pk):
-    """Soft-delete (archive) a vendor.
-    """
+    """Soft-delete (archive) a vendor."""
     if request.method == "POST":
         vendor = get_object_or_404(
             Vendor, pk=pk, organization=request.user.organization
@@ -130,8 +127,7 @@ def vendor_archive(request, pk):
 
 @login_required
 def offering_list(request):
-    """Show all active offerings under the current organization.
-    """
+    """Show all active offerings under the current organization."""
     offerings = (
         VendorOffering.objects.filter(
             vendor__organization=request.user.organization, archived=False
@@ -145,8 +141,7 @@ def offering_list(request):
 
 @login_required
 def offering_detail(request, pk):
-    """Show detail for a single offering.
-    """
+    """Show detail for a single offering."""
     offering = get_object_or_404(
         VendorOffering, pk=pk, vendor__organization=request.user.organization
     )
@@ -155,8 +150,7 @@ def offering_detail(request, pk):
 
 @login_required
 def offering_create(request, vendor_id):
-    """Create a new offering under a vendor.
-    """
+    """Create a new offering under a vendor."""
     vendor = get_object_or_404(
         Vendor, pk=vendor_id, organization=request.user.organization
     )
@@ -183,8 +177,7 @@ def offering_create(request, vendor_id):
 
 @login_required
 def offering_update(request, pk):
-    """Update an existing vendor offering.
-    """
+    """Update an existing vendor offering."""
     offering = get_object_or_404(
         VendorOffering, pk=pk, vendor__organization=request.user.organization
     )
@@ -214,8 +207,7 @@ def offering_update(request, pk):
 @login_required
 @csrf_protect
 def offering_archive(request, pk):
-    """Soft-delete (archive) an offering.
-    """
+    """Soft-delete (archive) an offering."""
     if request.method == "POST":
         offering = get_object_or_404(
             VendorOffering, pk=pk, vendor__organization=request.user.organization

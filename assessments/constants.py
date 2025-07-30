@@ -86,8 +86,7 @@ class QuestionCategories(TextChoices):
 
 # ------------------ File Upload Utility ------------------
 def evidence_upload_path(instance, filename):
-    """Save evidence files under: /evidence/<offering_id>/<date>/<uuid>.<ext>
-    """
+    """Save evidence files under: /evidence/<offering_id>/<date>/<uuid>.<ext>."""
     ext = filename.split(".")[-1]
     filename = f"{uuid4()}.{ext}"
     return os.path.join(

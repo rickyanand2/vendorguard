@@ -7,8 +7,7 @@ from workflow.models import State, Transition, Workflow, WorkflowLog, WorkflowOb
 
 
 def get_workflow_object(obj):
-    """Returns the WorkflowObject instance for the given model instance.
-    """
+    """Returns the WorkflowObject instance for the given model instance."""
     return WorkflowObject.objects.get_for_instance(obj)
 
 

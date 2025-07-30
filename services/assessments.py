@@ -17,8 +17,7 @@ from workflow.models import Workflow, WorkflowObject
 # ✅ Get assessments by org
 # ===========================
 def get_assessments_for_org(org):
-    """Fetch all assessments that belong to the user's organization.
-    """
+    """Fetch all assessments that belong to the user's organization."""
     return Assessment.objects.filter(organization=org).select_related(
         "questionnaire", "vendor_offering"
     )
@@ -29,7 +28,7 @@ def get_assessments_for_org(org):
 # ===========================
 def create_assessment_from_request(request):
     """Handles form submission for assessment creation.
-    Expects POST data: questionnaire, vendor_offering
+    Expects POST data: questionnaire, vendor_offering.
     """
     try:
         info_value = request.POST.get("information_value")

@@ -9,10 +9,11 @@ from vendors.enums import HostingType, OfferingType
 
 
 class Vendor(TimeStampedModel):
-    """Represents a third-party vendor (company), tied to an Organization.
-    """
+    """Represents a third-party vendor (company), tied to an Organization."""
 
-    # From Accounts Model we get organization | related_name: specifies reverse relationship in Accounts model for this vendor model
+    # From Accounts Model we get organization
+    # related_name specifies reverse relationship in Accounts model for this vendor model
+
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="vendors"
     )
@@ -30,13 +31,12 @@ class Vendor(TimeStampedModel):
     archived = models.BooleanField(default=False)
 
     def __str__(self):
+        """String representation of the model."""
         return self.name
 
 
 class VendorOffering(TimeStampedModel):
-    """Represents a specific offering/product/service from a Vendor.
-    Includes static metadata and current hosting/data profile.
-    """
+    """Represents a specific offering/product/service from a Vendor."""
 
     vendor = models.ForeignKey(
         Vendor, on_delete=models.CASCADE, related_name="offerings"
@@ -69,12 +69,12 @@ class VendorOffering(TimeStampedModel):
     archived = models.BooleanField(default=False)
 
     def __str__(self):
+        """String representation of the model."""
         return f"{self.name} ({self.vendor.name})"
 
 
 class VendorTrustProfile(models.Model):
-    """Stores vendor-wide trust posture and breach/insurance status.
-    """
+    """Stores vendor-wide trust posture and breach/insurance status."""
 
     vendor = models.OneToOneField(
         Vendor, on_delete=models.CASCADE, related_name="trust_profile"
@@ -90,4 +90,5 @@ class VendorTrustProfile(models.Model):
     )
 
     def __str__(self):
+        """String representation of the model."""
         return f"{self.vendor.name} Trust Profile"

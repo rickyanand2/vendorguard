@@ -172,7 +172,7 @@ class ManageTeamView(OwnerRequiredMixin, FormView):
         org = self.membership.organization
 
         try:
-            invite = InviteService.send_invite(
+            InviteService.send_invite(
                 email=email, job_title=job_title, org=org, request=self.request
             )
             messages.success(self.request, f"Invite sent to {email}.")

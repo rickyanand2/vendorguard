@@ -1,7 +1,8 @@
 # assessments/constants.py
 import os
-from uuid import uuid4
 from datetime import date
+from uuid import uuid4
+
 from django.db.models import TextChoices
 from django.utils.translation import gettext_lazy as _
 
@@ -85,8 +86,7 @@ class QuestionCategories(TextChoices):
 
 # ------------------ File Upload Utility ------------------
 def evidence_upload_path(instance, filename):
-    """
-    Save evidence files under: /evidence/<offering_id>/<date>/<uuid>.<ext>
+    """Save evidence files under: /evidence/<offering_id>/<date>/<uuid>.<ext>
     """
     ext = filename.split(".")[-1]
     filename = f"{uuid4()}.{ext}"

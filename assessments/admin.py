@@ -1,12 +1,13 @@
 # assessments/admin.py
 
 from django.contrib import admin
+
 from .models import (
-    Assessment,
-    Questionnaire,
-    Question,
     Answer,
+    Assessment,
     Certification,
+    Question,
+    Questionnaire,
     QuestionnaireQuestion,
 )
 

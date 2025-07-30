@@ -1,19 +1,20 @@
 # assessments/urls.py
 
 from django.urls import path
+
 from .views import (
-    AssessmentListView,
+    AnswerQuestionnaireView,
     AssessmentCreateView,
     AssessmentDetailView,
-    SubmitAssessmentForReviewView,
-    AnswerQuestionnaireView,
-    QuestionnaireListView,
+    AssessmentListView,
+    QuestionArchiveView,
+    QuestionCreateView,
+    QuestionListView,
     QuestionnaireCreateView,
     QuestionnaireDetailView,
-    QuestionCreateView,
-    QuestionArchiveView,
-    QuestionListView,
+    QuestionnaireListView,
     QuestionUpdateView,
+    SubmitAssessmentForReviewView,
 )
 
 app_name = "assessments"

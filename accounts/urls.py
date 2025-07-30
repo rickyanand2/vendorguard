@@ -1,16 +1,16 @@
 # accounts/urls.py
 from django.urls import path
-from . import views
-from .views import SoloRegisterView, TeamRegisterView
-from django.contrib.auth.views import LogoutView
+
 from accounts.views import (
+    AcceptInviteView,
+    ManageTeamView,
+    ProfileView,
     UserLoginView,
     UserLogoutView,
-    ProfileView,
-    ManageTeamView,
-    AcceptInviteView,
-    RemoveTeamMemberView,
 )
+
+from . import views
+from .views import SoloRegisterView, TeamRegisterView
 
 app_name = "accounts"  # 👈 Important for namespacing
 

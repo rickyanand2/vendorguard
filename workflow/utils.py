@@ -1,7 +1,8 @@
 # workflow/utils.py
 
-from .models import WorkflowObject, WorkflowLog, Transition, State
 from django.core.exceptions import PermissionDenied
+
+from .models import Transition, WorkflowLog, WorkflowObject
 
 
 # Transitions the object to a new state if a valid transition exists.

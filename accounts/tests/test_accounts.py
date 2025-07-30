@@ -1,11 +1,10 @@
 # accounts/tests/test_accounts.py
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
-from django.contrib.messages import get_messages
 
-from accounts.models import Organization, Membership
+from accounts.models import Membership, Organization
 
 User = get_user_model()
 

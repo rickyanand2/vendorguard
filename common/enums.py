@@ -1,6 +1,5 @@
 def get_choice_labels(enum_class, selected_keys):
-    """
-    Converts a list of enum keys to their human-readable labels.
+    """Converts a list of enum keys to their human-readable labels.
 
     Args:
         enum_class (models.TextChoices): The TextChoices enum.
@@ -8,6 +7,7 @@ def get_choice_labels(enum_class, selected_keys):
 
     Returns:
         list: List of human-readable labels (str).
+
     """
     if not selected_keys:
         return []

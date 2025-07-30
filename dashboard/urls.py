@@ -1,6 +1,7 @@
 # dashboard/urls.py
 from django.urls import path
-from .views import UserDashboardView, DashboardStatsView
+
+from .views import DashboardStatsView, UserDashboardView
 
 app_name = "dashboard"
 

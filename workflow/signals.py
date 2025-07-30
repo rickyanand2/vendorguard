@@ -1,8 +1,10 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.contenttypes.models import ContentType
-from .models import WorkflowObject, Workflow, State
+
 from assessments.models import Assessment  # target model
+
+from .models import State, Workflow, WorkflowObject
 
 
 @receiver(post_save, sender=Assessment)

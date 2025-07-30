@@ -11,8 +11,7 @@ def add_class(field, css_class):
 
 @register.simple_tag
 def form_field(field):
-    """
-    Renders a single Django form field with:
+    """Renders a single Django form field with:
     - Bootstrap 5 label
     - Help text if available
     - Inline validation errors

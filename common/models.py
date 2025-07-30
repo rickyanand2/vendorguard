@@ -1,7 +1,7 @@
 # common/models.py
 
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class TimeStampedModel(models.Model):
@@ -24,3 +24,19 @@ class TimeStampedModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+#### Taxonomy Models ######
+class DataType(models.Model):
+    code = models.CharField(max_length=20, unique=True)
+    label = models.CharField(max_length=255)
+    risk_score = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Data Type"
+        verbose_name_plural = "Data Types"
+        ordering = ["label"]
+
+    def __str__(self):
+        return self.label

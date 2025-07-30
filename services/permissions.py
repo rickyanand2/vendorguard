@@ -1,9 +1,10 @@
 # services/permissions.py
 
-from django.http import HttpResponseForbidden
 from django.contrib.auth.mixins import LoginRequiredMixin
-from accounts.models import Membership
 from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponseForbidden
+
+from accounts.models import Membership
 
 # ---------------------------------------------------------------------
 # ✅ Utility Functions

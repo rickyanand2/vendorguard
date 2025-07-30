@@ -1,14 +1,16 @@
 # vendors/forms.py
 
 from django import forms
-from .models import Vendor, VendorTrustProfile
+
 from assessments.models import VendorOffering
-from vendors.constants import DataType
+from common.models import DataType
+
+from .models import Vendor, VendorTrustProfile
 
 
 class VendorOfferingForm(forms.ModelForm):
-    data_types_handled = forms.MultipleChoiceField(
-        choices=DataType.choices,
+    data_types_handled = forms.ModelMultipleChoiceField(
+        queryset=DataType.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,  # ✅ checkboxes
         required=False,
         label="Types of Data Handled",

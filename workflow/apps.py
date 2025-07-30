@@ -7,4 +7,4 @@ class WorkflowConfig(AppConfig):
     name = "workflow"
 
     def ready(self):
-        import workflow.signals
+        pass

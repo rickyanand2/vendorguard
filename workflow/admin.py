@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Workflow, State, Transition, WorkflowObject, WorkflowLog
+
+from .models import State, Transition, Workflow, WorkflowLog, WorkflowObject
 
 
 @admin.register(Workflow)

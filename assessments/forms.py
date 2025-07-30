@@ -1,12 +1,13 @@
 # assessments/forms.py
 
 from django import forms
-from assessments.models import Assessment
 from taggit.forms import TagWidget
-from assessments.constants import InfoValueLevels, RiskLevels
-from .models import Answer, Assessment, Questionnaire, Question
-from assessments.constants import AnswerChoices
-from .constants import InfoValueChoices, RiskLevels, AnswerChoices
+
+from assessments.constants import AnswerChoices, InfoValueLevels, RiskLevels
+from assessments.models import Assessment
+
+from .constants import AnswerChoices, InfoValueChoices, RiskLevels
+from .models import Answer, Assessment, Question, Questionnaire
 
 
 class QuestionForm(forms.ModelForm):
@@ -66,8 +67,7 @@ class AnswerForm(forms.ModelForm):
 
 
 class InlineAnswerForm(forms.ModelForm):
-    """
-    Optional: Used for displaying answers inline with questions (e.g., in HTMX forms)
+    """Optional: Used for displaying answers inline with questions (e.g., in HTMX forms)
     """
 
     class Meta:

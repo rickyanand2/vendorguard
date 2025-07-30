@@ -2,13 +2,13 @@
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
+
 from accounts.constants import ROLE_OWNER
 from services.memberships import get_user_membership
 
 
 class OwnerRequiredMixin(LoginRequiredMixin):
-    """
-    Requires user to be logged in AND an organization owner.
+    """Requires user to be logged in AND an organization owner.
     Redirects unauthenticated users (via LoginRequiredMixin),
     returns 403 for authenticated but unauthorized users.
     """

@@ -2,17 +2,23 @@
 
 
 def calculate_vendor_trust_score(vendor):
-    """
-    Main function to calculate VendorGuard Trust Index (VTI)
-    on a scale from 0 to 1000.
-    """
-    score = 0
-    score += _security_score(vendor)
-    score += _assessment_score(vendor)
-    score += _certification_score(vendor)
-    score += _breach_history_score(vendor)
-    score += _transparency_score(vendor)
-    return min(score, 1000)
+    offerings = vendor.offerings.filter(archived=False)
+    scores = []
+
+    for offering in offerings:
+        if (
+            hasattr(offering, "assessment")
+            and offering.assessment
+            and offering.assessment.calculated_score
+        ):
+            scores.append(
+                offering.assessment.calculated_score
+            )  # Or however you compute it
+
+    if not scores:
+        return None  # No score if nothing to assess
+
+    return sum(scores) // len(scores)  # Avg trust score or weighted
 
 
 # ───────────────────────────────────────────
@@ -28,8 +34,7 @@ def _security_score(vendor):
 
 
 def _assessment_score(vendor):
-    """
-    Calculates assessment completion score for a vendor
+    """Calculates assessment completion score for a vendor
     by aggregating over all their offerings' assessments.
     """
     offerings = vendor.offerings.all()

@@ -1,20 +1,22 @@
 # assessments/models.py
 
 from django.db import models
-from vendors.models import Vendor, VendorOffering
-from trust.utils import cert_artifact_path
+from taggit.managers import TaggableManager
+
 from accounts.models import Organization
 from common.models import TimeStampedModel
-from taggit.managers import TaggableManager
+from trust.utils import cert_artifact_path
+from vendors.models import Vendor, VendorOffering
+
 from .constants import (
-    CertificationTypes,
-    ResponseTypes,
     AnswerChoices,
     AssessmentStatuses,
-    QuestionCategories,
-    evidence_upload_path,
-    RiskLevels,
+    CertificationTypes,
     InfoValueChoices,
+    QuestionCategories,
+    ResponseTypes,
+    RiskLevels,
+    evidence_upload_path,
 )
 
 
@@ -44,8 +46,7 @@ class Certification(TimeStampedModel):
 
 
 class Questionnaire(TimeStampedModel):
-    """
-    Represents a reusable questionnaire template.
+    """Represents a reusable questionnaire template.
     Each questionnaire contains a set of security/risk questions
     used across multiple vendor assessments.
     """
@@ -64,8 +65,7 @@ class Questionnaire(TimeStampedModel):
 
 
 class Question(TimeStampedModel):
-    """
-    Represents a single question that belongs to a questionnaire.
+    """Represents a single question that belongs to a questionnaire.
     Includes optional help text and a weight to indicate importance.
     """
 
@@ -96,8 +96,7 @@ class Question(TimeStampedModel):
 
 
 class Assessment(TimeStampedModel):
-    """
-    An instance of a questionnaire being used to assess a specific vendor
+    """An instance of a questionnaire being used to assess a specific vendor
     by a specific organization. Tracks status and aggregate score.
     """
 
@@ -149,8 +148,7 @@ class Assessment(TimeStampedModel):
 
 
 class Answer(TimeStampedModel):
-    """
-    Stores the answer to a specific question in the context of a specific assessment.
+    """Stores the answer to a specific question in the context of a specific assessment.
     Supports structured responses and optional comments.
     """
 

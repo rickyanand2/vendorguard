@@ -1,0 +1,26 @@
+# Ruff Configuration for Django (Vendorguard)
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+  "E",   # pycodestyle (PEP8)
+  "F",   # pyflakes
+  "I",   # isort (import sorting)
+  "D",   # pydocstyle
+  "B",   # flake8-bugbear
+  "DJ",  # flake8-django
+  "C90", # McCabe complexity
+  "UP",  # pyupgrade
+]
+ignore = [
+  "D100", "D104", "D106", "D401"  # Optional: ignore docstring rules for now
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["D"]  # skip docstring checks for test files
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

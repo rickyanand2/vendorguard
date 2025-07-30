@@ -1,28 +1,25 @@
 # assessments/views.py
 
-from django.views import View
-from django.views.generic import ListView, CreateView, DetailView, UpdateView
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponseBadRequest
 from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
-
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from .models import Assessment, Questionnaire, Question, VendorOffering, Vendor
-from workflow.models import WorkflowObject, WorkflowLog  # Workflow import
-
-from .forms import AssessmentForm, QuestionnaireForm, QuestionForm
-from services.workflow import ensure_workflow_for_object
 from services.assessments import (
     get_assessments_for_org,
-    create_assessment_from_request,
-    get_assessment_detail,
-    submit_assessment_for_review,
-    handle_answer_submission,
     get_questionnaire_context,
+    handle_answer_submission,
+    submit_assessment_for_review,
 )
+from services.workflow import ensure_workflow_for_object
+from workflow.models import WorkflowLog, WorkflowObject  # Workflow import
+
+from .forms import QuestionForm, QuestionnaireForm
+from .models import Assessment, Question, Questionnaire, VendorOffering
 
 # ====================================================
 # ✅ List of Questionnaire Views
@@ -140,6 +137,8 @@ class AssessmentDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+
+
 # ====================================================
 # ✅ Submit Assessment for Review
 # ====================================================
@@ -147,6 +146,8 @@ class SubmitAssessmentForReviewView(LoginRequiredMixin, View):
     def post(self, request, pk):
         success, message = submit_assessment_for_review(request.user, pk)
         if success:
+            ## Implement Below functionality, vendor model is missing
+            # update_vendor_score(vendor)
             messages.success(request, message)
             return redirect("assessments:detail", pk=pk)
         return HttpResponseBadRequest(message)

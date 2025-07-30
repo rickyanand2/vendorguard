@@ -6,4 +6,4 @@ class AssessmentsConfig(AppConfig):
     name = "assessments"
 
     def ready(self):
-        import assessments.signals  # 👈 Load signals
+        pass  # 👈 Load signals

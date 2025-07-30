@@ -1,34 +1,29 @@
 # accounts/views.py
 import logging
-from django.views import View
-from django.http import HttpResponse
+
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.decorators.http import require_POST
-from django.utils.decorators import method_decorator
-from django.utils.crypto import get_random_string
-from django.urls import reverse, reverse_lazy
-from django.shortcuts import redirect
-from django.views.generic import TemplateView, FormView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ValidationError
-from django.utils import timezone
-from accounts.forms import AcceptInviteForm
-from django.views.generic import TemplateView
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.http import require_POST
+from django.views.generic import FormView, TemplateView
+
 from accounts.forms import (
+    AcceptInviteForm,
     CustomSoloUserCreationForm,
     CustomTeamsCreationForm,
     TeamInviteForm,
 )
-from accounts.models import CustomUser, Membership, License, Invite
-from services.accounts import RegistrationService
-from services.accounts import InviteService
-from services.permissions import OwnerRequiredMixin
+from accounts.models import Invite, License
+from services.accounts import InviteService, RegistrationService
 from services.memberships import get_org_members
-from accounts.forms import TeamInviteForm
-
+from services.permissions import OwnerRequiredMixin
 
 logger = logging.getLogger(__name__)  # Setup logging for error tracking
 

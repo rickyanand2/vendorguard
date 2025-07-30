@@ -1,6 +1,7 @@
 # services/memberships.py
 from django.contrib.auth.models import AnonymousUser  # To handle non logged in users
-from accounts.models import Membership, CustomUser
+
+from accounts.models import CustomUser, Membership
 
 
 # 🔍 Get the current user's membership (e.g., to check org, role, etc.)

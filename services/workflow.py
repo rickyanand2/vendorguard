@@ -1,20 +1,19 @@
 # services/workflow.py
 
-from workflow.models import WorkflowObject, Transition, WorkflowLog, State, Workflow
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 
+from workflow.models import State, Transition, Workflow, WorkflowLog, WorkflowObject
+
 
 def get_workflow_object(obj):
-    """
-    Returns the WorkflowObject instance for the given model instance.
+    """Returns the WorkflowObject instance for the given model instance.
     """
     return WorkflowObject.objects.get_for_instance(obj)
 
 
 def get_or_create_workflow_object(obj, workflow):
-    """
-    Ensures the object has an associated WorkflowObject.
+    """Ensures the object has an associated WorkflowObject.
     If missing, creates one using the workflow's initial state.
     Requires the workflow object to already exist.
     """
@@ -36,8 +35,7 @@ def get_or_create_workflow_object(obj, workflow):
 
 
 def ensure_workflow_for_object(obj, workflow_name="Assessment Workflow"):
-    """
-    Ensure the given object has an associated WorkflowObject.
+    """Ensure the given object has an associated WorkflowObject.
     If missing, attach it using the workflow's initial state.
     """
     content_type = ContentType.objects.get_for_model(obj.__class__)
@@ -64,8 +62,7 @@ def ensure_workflow_for_object(obj, workflow_name="Assessment Workflow"):
 
 
 def get_available_transitions(user, obj):
-    """
-    Returns a list of valid transitions from the object's current state,
+    """Returns a list of valid transitions from the object's current state,
     optionally filtered by the user's role.
     """
     wf_obj = get_workflow_object(obj)
@@ -82,8 +79,7 @@ def get_available_transitions(user, obj):
 
 
 def apply_transition(user, obj, transition: Transition, comment=""):
-    """
-    Applies the given transition to the object:
+    """Applies the given transition to the object:
     - Moves it to the next state.
     - Updates the WorkflowObject and optionally the model's 'status' field.
     - Creates a WorkflowLog entry.

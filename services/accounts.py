@@ -1,16 +1,15 @@
 # services/accounts.py
 
 import logging
-from django.utils import timezone
-from accounts.models import CustomUser, Organization, Membership, License
-from accounts.constants import BLOCKED_EMAIL_DOMAINS
-from django.utils.crypto import get_random_string
-from accounts.models import Invite
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
-from django.core.exceptions import ValidationError
+from django.utils.crypto import get_random_string
 
+from accounts.constants import BLOCKED_EMAIL_DOMAINS
+from accounts.models import CustomUser, Invite, License, Membership, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -167,12 +166,10 @@ class RegistrationService:
     def invite_user_to_organization(
         cls, email: str, job_title: str, org: Organization
     ) -> str:
-        """
-        Sends an invite to a user by creating an Invite entry with a token.
+        """Sends an invite to a user by creating an Invite entry with a token.
         Returns the invite link.
         Raises ValueError if checks fail.
         """
-
         # Validate email domain
         if not cls.is_email_allowed_for_org(email, org):
             raise ValueError(

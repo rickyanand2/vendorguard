@@ -1,48 +1,38 @@
 # vendors/urls.py
 
 from django.urls import path
-from vendors.views import (
-    VendorListView,
-    VendorDetailView,
-    VendorCreateView,
-    VendorUpdateView,
-    VendorArchiveView,
-    VendorOfferingListView,
-    VendorOfferingCreateView,
-    VendorOfferingUpdateView,
-    VendorOfferingDetailView,
-    VendorOfferingArchiveView,
-)
+
+from . import views
 
 app_name = "vendors"
 
 urlpatterns = [
     # ──────────────── Vendor Views ────────────────
-    path("", VendorListView.as_view(), name="vendor_list"),
-    path("new/", VendorCreateView.as_view(), name="vendor_create"),
-    path("<int:pk>/", VendorDetailView.as_view(), name="vendor_detail"),
-    path("<int:pk>/edit/", VendorUpdateView.as_view(), name="vendor_update"),
-    path("<int:pk>/archive/", VendorArchiveView.as_view(), name="vendor_archive"),
+    path("", views.vendor_list, name="vendor_list"),
+    path("new/", views.vendor_create, name="vendor_create"),
+    path("<int:pk>/", views.vendor_detail, name="vendor_detail"),
+    path("<int:pk>/edit/", views.vendor_update, name="vendor_update"),
+    path("<int:pk>/archive/", views.vendor_archive, name="vendor_archive"),
     # ───────────── Vendor Offering Views ─────────────
-    path("offerings/", VendorOfferingListView.as_view(), name="offering_list"),
+    path("offerings/", views.offering_list, name="offering_list"),
     path(
         "offerings/new/<int:vendor_id>/",
-        VendorOfferingCreateView.as_view(),
+        views.offering_create,
         name="offering_create",
     ),
     path(
         "offerings/<int:pk>/",
-        VendorOfferingDetailView.as_view(),
+        views.offering_detail,
         name="offering_detail",
     ),
     path(
         "offerings/<int:pk>/edit/",
-        VendorOfferingUpdateView.as_view(),
+        views.offering_update,
         name="offering_update",
     ),
     path(
         "offerings/<int:pk>/archive/",
-        VendorOfferingArchiveView.as_view(),
+        views.offering_archive,
         name="offering_archive",
     ),
 ]

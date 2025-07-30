@@ -1,17 +1,16 @@
 # workflow/views.py
 
-from django.views import View
-from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
 
 from assessments.models import Assessment
-from workflow.models import Workflow, Transition
 from services.workflow import (
-    get_available_transitions,
-    get_or_create_workflow_object,
     apply_transition,
+    get_or_create_workflow_object,
 )
+from workflow.models import Transition, Workflow
 
 
 class SubmitAssessmentForReviewView(LoginRequiredMixin, View):

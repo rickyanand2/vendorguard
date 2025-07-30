@@ -1,27 +1,23 @@
 # services/assessments.py
 
 from django.shortcuts import get_object_or_404
-from assessments.models import Assessment, Questionnaire, Answer, Question
+
 from assessments.constants import AnswerChoices
-from vendors.models import VendorOffering
-from workflow.models import Workflow, WorkflowObject
-from django.db import transaction
-from django.forms import modelform_factory
+from assessments.models import Answer, Assessment, Questionnaire
 from services.workflow import (
-    get_or_create_workflow_object,
     apply_transition,
     ensure_workflow_for_object,
     get_available_transitions,
 )
-from django.contrib.contenttypes.models import ContentType
+from vendors.models import VendorOffering
+from workflow.models import Workflow, WorkflowObject
 
 
 # ===========================
 # ✅ Get assessments by org
 # ===========================
 def get_assessments_for_org(org):
-    """
-    Fetch all assessments that belong to the user's organization.
+    """Fetch all assessments that belong to the user's organization.
     """
     return Assessment.objects.filter(organization=org).select_related(
         "questionnaire", "vendor_offering"
@@ -32,8 +28,7 @@ def get_assessments_for_org(org):
 # ✅ Create new assessment
 # ===========================
 def create_assessment_from_request(request):
-    """
-    Handles form submission for assessment creation.
+    """Handles form submission for assessment creation.
     Expects POST data: questionnaire, vendor_offering
     """
     try:
@@ -88,8 +83,7 @@ def create_assessment_from_request(request):
 # ✅ Get context for detail view
 # ===========================
 def get_assessment_detail(assessment_id, org):
-    """
-    Fetch assessment, questions, and answers for detail view.
+    """Fetch assessment, questions, and answers for detail view.
     Now includes recommended risk level and information value.
     """
     assessment = get_object_or_404(Assessment, id=assessment_id, organization=org)

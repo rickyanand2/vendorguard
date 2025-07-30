@@ -1,6 +1,8 @@
 from django.contrib import admin
-from .models import Vendor, VendorTrustProfile, VendorOffering
+
 from assessments.models import Certification
+
+from .models import Vendor, VendorOffering, VendorTrustProfile
 
 
 class CertificationInline(admin.StackedInline):

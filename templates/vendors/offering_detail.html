@@ -78,12 +78,12 @@
               </li>
             </ul>
 
-            {% if offering.data_types_handled %}
+            {% if offering.data_types_handled.exists %}
               <p>
                 <strong>Data Types Handled:</strong>
               </p>
               <ul class="list-inline">
-                {% for dtype in offering.data_types_handled %}
+                {% for dtype in offering.data_types_handled.all %}
                   <li class="list-inline-item">
                     <span class="badge bg-info text-dark">{{ dtype }}</span>
                   </li>

@@ -1,15 +1,14 @@
 # accounts/models.py
 
-from django.db import models
+from datetime import timedelta
 
 from django.contrib.auth.models import (
     AbstractBaseUser,
-    PermissionsMixin,
     BaseUserManager,
+    PermissionsMixin,
 )
-
+from django.db import models
 from django.utils import timezone
-from datetime import timedelta
 
 
 # ======================================================================================

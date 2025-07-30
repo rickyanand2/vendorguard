@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Organization, Membership, License
+
 from .forms import CustomSoloUserCreationForm, CustomUserChangeForm
+from .models import CustomUser, License, Membership, Organization
 
 
 @admin.register(CustomUser)

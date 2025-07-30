@@ -1,9 +1,10 @@
 # dashboard/views.py
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView, View
-from django.http import JsonResponse
 from django.db.models import Avg
+from django.http import JsonResponse
+from django.views.generic import TemplateView, View
+
 from assessments.models import Assessment
 from vendors.models import Vendor
 

@@ -24,7 +24,7 @@
               <a href="{% url 'vendors:vendor_detail' vendor.pk %}" class="text-decoration-none fw-medium">{{ vendor.name }}</a>
             </td>
             <td>
-              {% if vendor.trust_profile.trust_score %}
+              {% if vendor.trust_profile.trust_score is not None %}
                 <span class="badge bg-dark text-light">{{ vendor.trust_profile.trust_score }}</span>
               {% else %}
                 <span class="badge bg-secondary">–</span>

@@ -17,6 +17,7 @@ urlpatterns = [
     # ✅ New apps
     path("vendors/", include("vendors.urls", namespace="vendors")),
     path("assessments/", include("assessments.urls", namespace="assessments")),
+    path("common/", include("common.urls")),
 ]
 
 # Serve static files in dev mode

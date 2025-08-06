@@ -1,0 +1,180 @@
+{% extends 'common/base.html' %}
+
+{% block title %}
+  VendorGuard UI Test
+{% endblock %}
+
+{% block content %}
+  <h1 class="mb-4 fw-bold fs-3">🧪 UI Layout Test Page</h1>
+  <p class="mb-4 text-muted">This page tests layout components (forms, badges, tables, modals, etc.) for reuse across VendorGuard.</p>
+
+  <!--                            ============================
+       🎨 BUTTONS + BADGES
+  ============================                            -->
+  <section class="mb-5">
+    <div class="mb-3 d-flex gap-3">
+      <a href="#" class="btn btn-primary">Primary</a>
+      <a href="#" class="btn btn-secondary">Secondary</a>
+    </div>
+    <div class="mb-3 d-flex gap-2 align-items-center">
+      {% include 'common/components/trust_badge.html' with score=850 %}
+      {% include 'common/components/trust_badge.html' with score=600 %}
+      {% include 'common/components/trust_badge.html' with score=300 %}
+    </div>
+  </section>
+
+  <!--                            ============================
+       📣 ALERT MESSAGES
+  ============================                            -->
+  <section class="mb-5">
+    <h4 class="mb-3 fw-bold border-bottom pb-2">📄 Message Alert Styles</h4>
+    {% for tag in alert_tags %}
+      <div class="alert alert-{{ tag }} alert-dismissible fade show mb-2" role="alert">
+        Sample {{ tag }} message
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </section>
+
+  <!--                            ============================
+       💬 MODAL COMPONENT
+  ============================                            -->
+  <section class="mb-5">
+    <h4 class="mb-3 fw-bold border-bottom pb-2">📄 Modal Component</h4>
+    {% include 'common/modal.html' with modal_id='testModal' modal_title='Demo Modal' modal_body='This is a test modal rendered via include.' %}
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#testModal">Launch Modal</button>
+  </section>
+
+  <!--                            ============================
+       🔁 FORM EXAMPLES
+  ============================                            -->
+  <section class="mb-5">
+    <div class="container mt-5">
+      <!-- ✅ Auto Layout -->
+      <section class="mb-5">
+        <h4 class="mb-3 fw-bold border-bottom pb-2">🚀 Auto Layout Form</h4>
+        {% include 'common/form_base_auto.html' with title='🚀 Auto Layout Form' description='This uses a looped field render via form_field.html.' form=form only %}
+      </section>
+
+      <!-- ✅ Manual Layout -->
+      <!-- ✅ FIXED: Manual Form rendered directly -->
+      <section class="mb-5">
+        <h4 class="mb-3 fw-bold border-bottom pb-2">🎯 Manual Layout Form</h4>
+        <form method="post" enctype="multipart/form-data" class="card p-4 shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title mb-2 fw-bold">🎯 Manual Layout Form</h5>
+            <p class="text-muted small mb-5">This uses a hand-crafted field layout for control.</p>
+
+            {% csrf_token %}
+            <div class="row g-3">
+              {% include 'common/components/form_row_2fields.html' with field1=form.first_name field2=form.last_name %}
+              {% include 'common/components/form_row_2fields.html' with field1=form.email field2=form.password %}
+              {% include 'common/components/form_row_2fields.html' with field1=form.role field2=form.document %}
+              {% include 'common/components/form_row_1field.html' with field=form.notes %}
+              <div class="form-check mt-3 ms-1">
+                {{ form.confirm }}
+                <label class="form-check-label" for="{{ form.confirm.id_for_label }}">{{ form.confirm.label }}</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer d-flex justify-content-end gap-2 border-0 bg-transparent">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="#" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </section>
+    </div>
+  </section>
+
+  <!--                            ============================
+       📋 TABLE + FILTER
+  ============================                            -->
+  <section class="mb-5">
+    <h4 class="mb-3 fw-bold">📋 Table/List UI Component</h4>
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <input type="text" class="form-control" placeholder="Search by vendor name..." />
+      </div>
+      <div class="col-md-3">
+        <select class="form-select">
+          <option selected>All Status</option>
+          <option>Approved</option>
+          <option>Pending</option>
+          <option>Rejected</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 bg-white shadow-sm rounded">
+        <thead class="table-light">
+          <tr>
+            <th>Vendor</th>
+            <th>Offering</th>
+            <th>Risk Score</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Acme Corp</td>
+            <td>Email Hosting</td>
+            <td>
+              {% include 'common/components/trust_badge.html' with score=850 %}
+            </td>
+            <td>
+              <span class="badge bg-success">Approved</span>
+            </td>
+            <td>
+              <a href="#" class="btn btn-sm btn-outline-primary me-1">View</a>
+              <a href="#" class="btn btn-sm btn-outline-secondary me-1">Edit</a>
+              <button class="btn btn-sm btn-outline-danger">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <nav aria-label="Page navigation" class="mt-3">
+      <ul class="pagination justify-content-end">
+        <li class="page-item disabled">
+          <a class="page-link">Prev</a>
+        </li>
+        <li class="page-item active">
+          <a class="page-link" href="#">1</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="#">2</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="#">Next</a>
+        </li>
+      </ul>
+    </nav>
+  </section>
+
+  <!--                            ============================
+       🧱 CARD-BASED METRICS
+  ============================                            -->
+  <section class="mb-5">
+    <h4 class="mb-3 fw-bold">📦 Card-Based Summary</h4>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">High-Risk Vendors</h5>
+            <p class="card-text fs-3 text-danger">4</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Total Vendors</h5>
+            <p class="card-text fs-3">25</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

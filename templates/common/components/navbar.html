@@ -1,0 +1,37 @@
+<nav class="navbar navbar-light bg-white shadow-sm px-4 py-3 sticky-top">
+  <a class="navbar-brand fw-bold fs-4" href="{% url 'website:home' %}">VendorGuard</a>
+  <div class="ms-auto d-flex align-items-center flex-wrap">
+    {% if user.is_authenticated %}
+      {% if user.is_owner %}
+        <a href="{% url 'dashboard:dashboard' %}" class="me-3 text-muted text-decoration-none">Dashboard</a>
+        <a href="{% url 'accounts:manage_team' %}" class="me-3 text-muted text-decoration-none">Team</a>
+      {% endif %}
+      <div class="dropdown me-3">
+        <a class="text-muted text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Assessments</a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'assessments:questionnaire_list' %}">Questionnaires</a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'assessments:question_list' %}">Questions</a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'assessments:assessment_list' %}">All Assessments</a>
+          </li>
+        </ul>
+      </div>
+      <a href="{% url 'vendors:vendor_list' %}" class="me-3 text-muted text-decoration-none">Vendors</a>
+      <a href="{% url 'vendors:offering_list' %}" class="me-3 text-muted text-decoration-none">Offerings</a>
+      <a href="{% url 'accounts:profile' %}" class="me-3 text-muted text-decoration-none">Profile</a>
+      <form action="{% url 'accounts:logout' %}" method="post" class="mb-0">
+        {% csrf_token %}
+        <button type="submit" class="me-3 btn btn-link text-muted text-decoration-none p-0 align-baseline">Logout</button>
+      </form>
+    {% else %}
+      <a href="{% url 'accounts:login' %}" class="me-3 text-muted text-decoration-none">Login</a>
+      <a href="#" class="me-3 text-muted text-decoration-none">Features</a>
+      <a href="#" class="me-3 text-muted text-decoration-none">Pricing</a>
+      <a href="{% url 'accounts:register_solo' %}" class="btn btn-brand">Get Started</a>
+    {% endif %}
+  </div>
+</nav>

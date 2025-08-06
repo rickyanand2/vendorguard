@@ -80,3 +80,23 @@
       color: var(--vg-muted);
       padding: 2rem 0;
     }
+
+/*
+For filter based on trust badge
+*/
+    .badge-high {
+  background-color: #198754; /* green */
+  color: white;
+}
+.badge-medium {
+  background-color: #ffc107; /* yellow */
+  color: black;
+}
+.badge-low {
+  background-color: #dc3545; /* red */
+  color: white;
+}
+.badge-unknown {
+  background-color: #6c757d; /* gray */
+  color: white;
+}

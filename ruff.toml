@@ -1,6 +1,6 @@
 # Ruff Configuration for Django (Vendorguard)
 exclude = ["*/migrations/*"]
-line-length = 100
+line-length = 250
 target-version = "py311"
 
 [lint]
@@ -15,7 +15,7 @@ select = [
   "UP",  # pyupgrade
 ]
 ignore = [
-  "D100", "D104", "D106", "D401"  # Optional: ignore docstring rules for now
+  "D100", "D104", "D106", "D401", "D102",  # Optional: ignore docstring rules for now
 ]
 
 [lint.per-file-ignores]

@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "vendors",
     "assessments",  # Third party risk assessments
     "workflow",
-    "common",  # For Audit Log
+    "common",  # To add Audit Log
 ]
 
 MIDDLEWARE = [

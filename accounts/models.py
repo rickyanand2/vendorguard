@@ -1,50 +1,63 @@
-# accounts/models.py
+"""Lean, data-only models for the accounts app (no business logic)."""
 
-from datetime import timedelta
+from ipaddress import ip_network
 
+from django.conf import settings
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
 )
+from django.core.exceptions import ValidationError
+from django.core.validators import MinLengthValidator
 from django.db import models
+from django.db.models import Index, Q, UniqueConstraint
 from django.utils import timezone
 
+from accounts import choices as CH
 
-# ======================================================================================
-# USER MANAGER
-# Custom user manager handles user and superuser creation || Overrides default user model
-# ======================================================================================
+
+# ===== User manager ===========================================================
 class CustomUserManager(BaseUserManager):
+    """Create/save users."""
 
-    # Creates and saves a regular user with the given details.
     def create_user(
-        self, email, first_name="", last_name=None, password=None, **extra_fields
+        self,
+        email,
+        first_name: str = "",
+        last_name: str = "",
+        password=None,
+        **extra_fields,
     ):
+        """Create regular user."""
         if not email:
             raise ValueError("Users must have a valid email address")
-
         email = self.normalize_email(email)
-
-        # Create user object with provided fields
         user = self.model(
             email=email,
-            first_name=first_name,
-            last_name=last_name,
+            first_name=first_name or "",
+            last_name=last_name or "",
             **extra_fields,
         )
-
-        user.set_password(password)  # Hashes the password securely
-        user.save(using=self._db)  # Save using default database
+        if password:
+            user.set_password(password)  # hash password
+        else:
+            user.set_unusable_password()  # invite/verify flow
+        user.save(using=self._db)
         return user
 
-    # Creates and saves a superuser
     def create_superuser(
-        self, email, first_name="", last_name=None, password=None, **extra_fields
+        self,
+        email,
+        first_name: str = "Admin",
+        last_name: str = "",
+        password=None,
+        **extra_fields,
     ):
+        """Create superuser."""
         extra_fields.setdefault("is_admin", True)
         extra_fields.setdefault("is_superuser", True)
-
+        extra_fields.setdefault("is_active", True)
         user = self.create_user(
             email=email,
             first_name=first_name,
@@ -58,143 +71,338 @@ class CustomUserManager(BaseUserManager):
         return user
 
 
-# ======================================================================================
-# Organization (Multi-Tenant Backbone)
-# For multi tenancy - Each org is identified by domain; used to group users, plans, trials
-# ======================================================================================
+# ===== Organization ===========================================================
 class Organization(models.Model):
-    name = models.CharField(
-        max_length=255, unique=True
-    )  # Enforced uniqueness to prevent duplicates
+    """Customer tenant container."""
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_personal = models.BooleanField(default=False)  #  True for individuals
-
+    name = models.CharField(max_length=255, unique=True)
+    is_personal = models.BooleanField(default=False)  # solo workspace flag
     domain = models.CharField(
-        max_length=100, blank=True, null=True
-    )  # Optional: derived from email
-
+        max_length=191, blank=True, null=True, help_text="Business email domain."
+    )
+    status = models.CharField(
+        max_length=12,
+        choices=CH.OrganizationStatus.choices,
+        default=CH.OrganizationStatus.ACTIVE,
+    )
     is_active = models.BooleanField(default=True)
 
+    # Policy knobs (data-only; enforced in services/middleware)
+    require_mfa = models.BooleanField(default=False)
+    password_min_length = models.PositiveSmallIntegerField(default=12)
+    max_failed_logins = models.PositiveSmallIntegerField(default=7)
+    lockout_minutes = models.PositiveSmallIntegerField(default=15)
+    session_timeout_minutes = models.PositiveSmallIntegerField(default=60)
+    enforce_business_email = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)  # created timestamp
+    updated_at = models.DateTimeField(auto_now=True)  # updated timestamp
+
+    class Meta:
+        indexes = [Index(fields=["name"]), Index(fields=["domain"])]
+        constraints = [
+            UniqueConstraint(
+                fields=["domain"],
+                name="uniq_org_domain_nullable",
+                condition=Q(domain__isnull=False) & ~Q(domain=""),
+            ),
+        ]
+        ordering = ["name"]
+
     def __str__(self):
+        """Readable label."""
         return self.name
 
 
-# ======================================================================================
-# CUSTOM USER
-# User configurations
-# ======================================================================================
+# ===== Network policy (IP rules) =============================================
+class OrganizationAccessRule(models.Model):
+    """IP allow/deny CIDR rules."""
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="access_rules"
+    )
+    action = models.CharField(
+        max_length=10,
+        choices=CH.AccessRuleAction.choices,
+        default=CH.AccessRuleAction.ALLOW,
+    )
+    cidr = models.CharField(max_length=64, help_text="CIDR, e.g., 203.0.113.0/24")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [Index(fields=["organization", "is_active"])]
+
+    def __str__(self):
+        """Readable label."""
+        return f"{self.organization.name} {self.action.upper()} {self.cidr}"
+
+    def clean(self):
+        """Validate CIDR value."""
+        try:
+            ip_network(self.cidr)
+        except Exception as exc:
+            raise ValidationError({"cidr": f"Invalid CIDR: {exc}"})
+
+
+# ===== Custom user ============================================================
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+    """Application user (email login)."""
 
-    email = models.EmailField(unique=True, max_length=255)  # Username field
+    email = models.EmailField(unique=True, max_length=255, db_index=True)
+    first_name = models.CharField(max_length=50, blank=True, default="")
+    last_name = models.CharField(max_length=50, blank=True, default="")
 
-    # Identity fields
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-
-    # Profile metadata
+    # Profile
     job_title = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     state = models.CharField(max_length=100, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
 
-    # Email verification flag (controlled by token/email flow)
+    # Email verification
     is_verified_email = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
 
-    # Access control
+    # Security posture (data only)
+    last_password_change = models.DateTimeField(null=True, blank=True)
+    failed_login_count = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    # MFA footprint
+    mfa_enabled = models.BooleanField(default=False)
+    mfa_secret = models.CharField(max_length=64, blank=True, null=True)
+
+    # Django admin + status
     is_active = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)  # Used for admin panel
+    is_admin = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
-    @property
-    def is_owner(self):
-        try:
-            return self.membership.role == "owner"
-        except Membership.DoesNotExist:
-            return False
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
 
-    @property
-    def organization(self):
-        try:
-            return self.membership.organization
-        except Membership.DoesNotExist:
-            return None
+    objects = CustomUserManager()
 
-    USERNAME_FIELD = "email"  # Email is used to log in instead of username
-    REQUIRED_FIELDS = [
-        "last_name",
-    ]
+    class Meta:
+        ordering = ["-date_joined"]
 
-    objects = CustomUserManager()  # Tell Django to use our custom manager
-
-    # Displayed as identifier in admin
     def __str__(self):
-        return f"{self.first_name} {self.last_name} <{self.email}>"
+        """Readable label."""
+        return f"{self.full_name} <{self.email}>"
 
     @property
     def is_staff(self):
+        """Django admin flag."""
         return self.is_admin
 
+    @property
+    def full_name(self) -> str:
+        """Full name or email fallback."""
+        fn = (self.first_name or "").strip()
+        ln = (self.last_name or "").strip()
+        return (fn + " " + ln).strip() or self.email
 
-# ==============================================================
-# MEMBERSHIP MODEL (User ↔ Org)
-# Allows linking users to orgs, with role-based flags like is_owner
-# ==============================================================
-from django.conf import settings
 
-
+# ===== Membership (user↔org) ==================================================
 class Membership(models.Model):
-    ROLE_CHOICES = [
-        ("owner", "Owner"),
-        ("admin", "Admin"),
-        ("member", "Member"),
-        ("viewer", "Viewer"),
-    ]
+    """User membership in an organization."""
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    organization = models.ForeignKey("Organization", on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="memberships"
+    )
+    role = models.CharField(
+        max_length=10,
+        choices=CH.MembershipRole.choices,
+        default=CH.MembershipRole.MEMBER,
+    )
+    is_active = models.BooleanField(default=True)
+    is_primary = models.BooleanField(
+        default=False, help_text="Default org when user has multiple orgs."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)  # created timestamp
+    updated_at = models.DateTimeField(auto_now=True)  # updated timestamp
+
+    class Meta:
+        indexes = [
+            Index(fields=["organization", "role"]),
+            Index(fields=["user", "is_active"]),
+        ]
+        constraints = [
+            UniqueConstraint(
+                fields=["user", "organization"],
+                name="uniq_user_org_active",
+                condition=Q(is_active=True),
+            ),
+            UniqueConstraint(
+                fields=["user"],
+                name="uniq_primary_membership_per_user",
+                condition=Q(is_primary=True) & Q(is_active=True),
+            ),
+        ]
+        ordering = ["organization__name", "user__email"]
 
     def __str__(self):
-        return f"{self.user.email} - {self.role} of {self.organization.name}"
+        """Readable label."""
+        status = "active" if self.is_active else "inactive"
+        return f"{self.user.email} [{self.role}] @ {self.organization.name} ({status})"
 
 
-# ======================================================================================
-# LICENSE MODEL (Plan Management)
-# ======================================================================================
+# ===== License (subscription) =================================================
 class License(models.Model):
-    PLAN_CHOICES = [
-        ("standard", "Standard"),
-        ("teams", "Teams"),
-        ("enterprise", "Enterprise"),
-    ]
+    """Subscription license record."""
 
-    organization = models.OneToOneField(Organization, on_delete=models.CASCADE)
-    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default="standard")
-    start_date = models.DateField(default=timezone.now)
+    organization = models.OneToOneField(
+        Organization, on_delete=models.CASCADE, related_name="license"
+    )
+    plan = models.CharField(
+        max_length=20, choices=CH.PlanChoices.choices, default=CH.PlanChoices.STANDARD
+    )
+    start_date = models.DateField(default=timezone.localdate)
     end_date = models.DateField()
     is_trial = models.BooleanField(default=True)
 
-    def is_active(self):
-        return self.end_date >= timezone.now()
+    class Meta:
+        indexes = [Index(fields=["end_date"]), Index(fields=["plan"])]
+        ordering = ["end_date"]
 
     def __str__(self):
+        """Readable label."""
         return f"{self.organization.name} – {self.plan.capitalize()}"
 
 
+# ===== Invites & short-lived tokens ==========================================
 class Invite(models.Model):
+    """Pending invitation to join an org."""
+
     email = models.EmailField()
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    token = models.CharField(max_length=64, unique=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="invites"
+    )
+    role = models.CharField(
+        max_length=10,
+        choices=CH.MembershipRole.choices,
+        default=CH.MembershipRole.MEMBER,
+    )
+    token = models.CharField(
+        max_length=64, unique=True, validators=[MinLengthValidator(32)]
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_invites",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     is_expired = models.BooleanField(default=False)
 
-    @property
-    def is_valid(self):
-        return (
-            not self.is_expired
-            and self.accepted_at is None
-            and timezone.now() <= self.created_at + timedelta(days=7)
+    class Meta:
+        indexes = [
+            Index(fields=["email"]),
+            Index(fields=["organization", "created_at"]),
+        ]
+        constraints = [
+            UniqueConstraint(
+                fields=["organization", "email"],
+                name="uniq_pending_invite_per_email_org",
+                condition=Q(accepted_at__isnull=True) & Q(is_expired=False),
+            ),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        """Readable label."""
+        state = (
+            "accepted"
+            if self.accepted_at
+            else ("expired" if self.is_expired else "pending")
         )
+        return f"Invite {self.email} @ {self.organization.name} ({state})"
+
+
+class EmailVerificationToken(models.Model):
+    """Short-lived email verification token."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_tokens"
+    )
+    token = models.CharField(
+        max_length=64, unique=True, validators=[MinLengthValidator(32)]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [Index(fields=["user", "created_at"])]
+
+    def __str__(self):
+        """Readable label (non-sensitive token preview)."""
+        preview = self.token[:6]
+        return f"EmailVerifyToken({preview}…) for {self.user.email}"
+
+
+class PasswordResetToken(models.Model):
+    """Short-lived password reset token."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reset_tokens"
+    )
+    token = models.CharField(
+        max_length=64, unique=True, validators=[MinLengthValidator(32)]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [Index(fields=["user", "created_at"])]
+
+    def __str__(self):
+        """Readable label (non-sensitive token preview)."""
+        preview = self.token[:6]
+        return f"PasswordResetToken({preview}…) for {self.user.email}"
+
+
+class RecoveryCode(models.Model):
+    """MFA recovery code (hashed)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="recovery_codes",
+    )
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [Index(fields=["user"])]
+
+    def __str__(self):
+        """Readable label (do not show full hash)."""
+        preview = (self.code_hash or "")[:8]
+        return f"RecoveryCode({preview}…) for {self.user.email}"
+
+
+# ===== Audit =================================================================
+class AuthEvent(models.Model):
+    """Auth/audit trail entry."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="auth_events"
+    )
+    event = models.CharField(max_length=32, choices=CH.AuthEventType.choices)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, default="")
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [Index(fields=["user", "occurred_at"])]
+        ordering = ["-occurred_at"]
+
+    def __str__(self):
+        """Readable label."""
+        return f"{self.user.email} {self.event} @ {self.occurred_at:%Y-%m-%d %H:%M:%S}"

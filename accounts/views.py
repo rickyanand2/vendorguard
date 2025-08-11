@@ -1,254 +1,287 @@
 # accounts/views.py
-import logging
+"""Function-based views for accounts."""
 
 from django.contrib import messages
-from django.contrib.auth import login
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
-from django.core.exceptions import ValidationError
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
-from django.utils.decorators import method_decorator
-from django.views import View
-from django.views.decorators.http import require_POST
-from django.views.generic import FormView, TemplateView
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_protect
 
+import common.errors as ERR
+import services.services_accounts as svc
 from accounts.forms import (
     AcceptInviteForm,
-    CustomSoloUserCreationForm,
-    CustomTeamsCreationForm,
-    TeamInviteForm,
+    InviteForm,
+    LoginForm,
+    PasswordResetConfirmForm,
+    PasswordResetRequestForm,
+    RegisterSoloForm,
+    RegisterTeamOwnerForm,
 )
-from accounts.models import Invite, License
-from services.accounts import InviteService, RegistrationService
-from services.memberships import get_org_members
-from services.permissions import OwnerRequiredMixin
-
-logger = logging.getLogger(__name__)  # Setup logging for error tracking
+from accounts.models import Membership
 
 
-# ====================================================================
-# 🔐 Solo User Registration (default public entry point)
-# ====================================================================
-class SoloRegisterView(FormView):
-    form_class = CustomSoloUserCreationForm
-    template_name = "accounts/register_solo.html"
-    success_url = reverse_lazy("accounts:profile")
+# ===== Auth ===================================================================
+@csrf_protect
+def login_view(request: HttpRequest) -> HttpResponse:
+    """Email/password login."""
+    if request.method == "POST":
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data["email"].lower()
+            password = form.cleaned_data["password"]
+            user = authenticate(request, username=email, password=password)
+            if user:
+                try:
+                    svc.auth_guard_login_attempt(
+                        user,
+                        ip=request.META.get("REMOTE_ADDR"),
+                        ua=request.META.get("HTTP_USER_AGENT", ""),
+                    )
+                except (ERR.LockedOut, ERR.MFARequired, ERR.IPAccessDenied) as e:
+                    messages.error(request, str(e))
+                    return render(
+                        request, "accounts/login.html", {"form": form}, status=403
+                    )
 
-    def form_valid(self, form):
-        try:
-            user = RegistrationService.register_solo_user(
-                email=form.cleaned_data["email"],
-                password=form.cleaned_data["password1"],
-                first_name=form.cleaned_data["first_name"],
-                last_name=form.cleaned_data["last_name"],
-                job_title=form.cleaned_data.get("job_title"),
-            )
-            login(self.request, user)
-            messages.success(self.request, "Welcome! Your 14-day trial has started.")
-            return super().form_valid(form)
+                login(request, user)  # Django session rotation
+                svc.auth_record_successful_login(
+                    user,
+                    ip=request.META.get("REMOTE_ADDR"),
+                    ua=request.META.get("HTTP_USER_AGENT", ""),
+                )
+                messages.success(request, "Welcome back!")
+                return redirect("accounts:team_manage")
+            else:
+                # On failure, increment lockout if user exists.
+                from accounts.models import CustomUser
 
-        except ValidationError as ve:
-            form.add_error(None, str(ve))
-            return self.form_invalid(form)
-
-        except Exception as e:
-            logger.exception("Solo registration failed")
-            form.add_error(None, f"Unexpected error: {str(e)}")
-            return self.form_invalid(form)
-
-
-# ====================================================================
-
-
-# ====================================================================
-# 🏢 Team/Enterprise Registration (via hidden CTA)
-# ====================================================================
-class TeamRegisterView(FormView):
-    form_class = CustomTeamsCreationForm
-    template_name = "accounts/register_team.html"
-    success_url = reverse_lazy("accounts:profile")
-
-    def form_valid(self, form):
-        try:
-            user = RegistrationService.register_team_owner(
-                email=form.cleaned_data["email"],
-                password=form.cleaned_data["password1"],
-                first_name=form.cleaned_data["first_name"],
-                last_name=form.cleaned_data["last_name"],
-                org_name=form.cleaned_data["org_name"],
-                domain=form.cleaned_data["domain"].lower(),
-                job_title=form.cleaned_data.get("job_title"),
-            )
-            login(self.request, user)
-            messages.success(
-                self.request, f"Team '{form.cleaned_data['org_name']}' created!"
-            )
-            return super().form_valid(form)
-        except ValidationError as ve:
-            form.add_error(None, str(ve))
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.exception("Team registration failed")
-            form.add_error(None, f"Unexpected error: {str(e)}")
-            return self.form_invalid(form)
+                try:
+                    existing = CustomUser.objects.get(email=email)
+                    svc.auth_record_failed_login(existing)
+                except CustomUser.DoesNotExist:
+                    pass
+                messages.error(request, "Invalid credentials.")
+    else:
+        form = LoginForm()
+    return render(request, "accounts/login.html", {"form": form})
 
 
-# ====================================================================
+def logout_view(request: HttpRequest) -> HttpResponse:
+    """Logout user."""
+    logout(request)
+    messages.info(request, "Signed out.")
+    return redirect("accounts:login")
 
 
-# ====================================================================
-# 🔓🔐 User Login and Logout Views
-# ====================================================================
-class UserLoginView(LoginView):
-    template_name = "accounts/login.html"
-    redirect_authenticated_user = True
-
-    def get_success_url(self):
-        return reverse("accounts:profile")
-
-
-class UserLogoutView(LogoutView):
-    next_page = reverse_lazy("website:home")
-
-
-# ====================================================================
-
-
-# ====================================================================
-# 👤 Profile View
-# ====================================================================
-class ProfileView(LoginRequiredMixin, TemplateView):
-    template_name = "accounts/profile.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        membership = getattr(self.request.user, "membership", None)
-
-        if membership is None:
-            context["organization"] = None
-            context["license"] = None
-            context["role"] = None
-        else:
-            context["organization"] = membership.organization
-            context["license"] = License.objects.filter(
-                organization=membership.organization
-            ).first()
-            context["role"] = membership.role
-
-        return context
+# ===== Registration ===========================================================
+@csrf_protect
+def register_solo_view(request: HttpRequest) -> HttpResponse:
+    """Register solo account."""
+    if request.method == "POST":
+        form = RegisterSoloForm(request.POST)
+        if form.is_valid():
+            try:
+                user = svc.registration_guarded_solo(
+                    email=form.cleaned_data["email"],
+                    password=form.cleaned_data["password"],
+                    first_name=form.cleaned_data["first_name"],
+                    last_name=form.cleaned_data["last_name"],
+                    job_title=form.cleaned_data.get("job_title"),
+                )
+                token = svc.email_issue_token(user)
+                messages.success(request, f"Verify email with token (dev): {token}")
+                return redirect("accounts:login")
+            except ERR.InvalidEmailDomain as e:
+                messages.error(request, str(e))
+    else:
+        form = RegisterSoloForm()
+    return render(request, "accounts/register_solo.html", {"form": form})
 
 
-# ====================================================================
+@csrf_protect
+def register_team_owner_view(request: HttpRequest) -> HttpResponse:
+    """Register team owner."""
+    if request.method == "POST":
+        form = RegisterTeamOwnerForm(request.POST)
+        if form.is_valid():
+            try:
+                user = svc.registration_guarded_team_owner(
+                    email=form.cleaned_data["email"],
+                    password=form.cleaned_data["password"],
+                    first_name=form.cleaned_data["first_name"],
+                    last_name=form.cleaned_data["last_name"],
+                    org_name=form.cleaned_data["org_name"],
+                    domain=form.cleaned_data.get("domain"),
+                    job_title=form.cleaned_data.get("job_title"),
+                )
+                token = svc.email_issue_token(user)
+                messages.success(request, f"Verify email with token (dev): {token}")
+                return redirect("accounts:login")
+            except ERR.InvalidEmailDomain as e:
+                messages.error(request, str(e))
+    else:
+        form = RegisterTeamOwnerForm()
+    return render(request, "accounts/register_team.html", {"form": form})
 
 
-# ====================================================================
-# 🧑‍💼 Manage Team (only for Org Owners)
-# ====================================================================
+# ===== Email Verification & Password Reset ===================================
+@csrf_protect
+def email_verify_view(request: HttpRequest) -> HttpResponse:
+    """Verify email by token (?token=...)."""
+    token = request.GET.get("token") or request.POST.get("token")
+    if not token:
+        return HttpResponseBadRequest("Missing token.")
+    try:
+        svc.email_verify(token)
+        messages.success(request, "Email verified.")
+    except ERR.InvalidToken as e:
+        messages.error(request, str(e))
+    return redirect("accounts:login")
 
 
-class ManageTeamView(OwnerRequiredMixin, FormView):
-    template_name = "accounts/team_manage.html"
-    form_class = TeamInviteForm
-    success_url = reverse_lazy("accounts:manage_team")
-
-    def get_context_data(self, **kwargs):
-        # Adds current organization members to the context.
-        context = super().get_context_data(**kwargs)
-        org = self.membership.organization
-        members = get_org_members(self.request.user)
-        context.update(
-            {
-                "members": members,
-                "org_domain": org.domain,
-            }
-        )
-        return context
-
-    def form_valid(self, form):
-        email = form.cleaned_data["email"]
-        job_title = form.cleaned_data["job_title"]
-        org = self.membership.organization
+@csrf_protect
+def password_reset_request_view(request: HttpRequest) -> HttpResponse:
+    """Start password reset (dev-friendly)."""
+    form = PasswordResetRequestForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        from accounts.models import CustomUser
 
         try:
-            InviteService.send_invite(
-                email=email, job_title=job_title, org=org, request=self.request
+            user = CustomUser.objects.get(email=form.cleaned_data["email"].lower())
+            token = svc.password_issue_reset(user)
+            messages.success(request, f"Reset token (dev): {token}")
+        except CustomUser.DoesNotExist:
+            messages.info(
+                request, "If the email exists, a reset token has been issued."
             )
-            messages.success(self.request, f"Invite sent to {email}.")
-            return super().form_valid(form)
-        except ValidationError as ve:
-            form.add_error(None, str(ve))
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.exception("Error during invite")
-            form.add_error(None, f"Unexpected error: {str(e)}")
-            return self.form_invalid(form)
+        return redirect("accounts:password_reset_request")
+    return render(request, "accounts/password_reset_request.html", {"form": form})
 
 
-# ====================================================================
-
-
-# ====================================================================
-# Invite Users to Org
-# ====================================================================
-class AcceptInviteView(FormView):
-    template_name = "accounts/accept_invite.html"
-    form_class = AcceptInviteForm
-    success_url = reverse_lazy("accounts:profile")
-
-    def dispatch(self, request, *args, **kwargs):
-        self.token = request.GET.get("token")
+@csrf_protect
+def password_reset_confirm_view(request: HttpRequest) -> HttpResponse:
+    """Confirm password reset by token."""
+    form = PasswordResetConfirmForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
         try:
-            self.invite = Invite.objects.get(token=self.token)
-            if not self.invite.is_valid:
-                raise ValueError("Invalid or expired.")
-        except Exception:
-            messages.error(request, "This invite link is invalid or expired.")
-            return redirect("website:home")
-        return super().dispatch(request, *args, **kwargs)
+            svc.password_reset_with_token(
+                form.cleaned_data["token"], form.cleaned_data["new_password"]
+            )
+            messages.success(request, "Password updated. Please sign in.")
+            return redirect("accounts:login")
+        except ERR.InvalidToken as e:
+            messages.error(request, str(e))
+    return render(request, "accounts/password_reset_confirm.html", {"form": form})
 
-    def form_valid(self, form):
+
+# ===== Team management (HTMX-friendly) =======================================
+@login_required
+def team_manage_view(request: HttpRequest) -> HttpResponse:
+    """Team management dashboard."""
+    q = (request.GET.get("q") or "").strip().lower()
+    org = svc.membership_primary_org(request.user)
+    memberships = (
+        Membership.objects.filter(organization=org, is_active=True)
+        .select_related("user")
+        .order_by("user__email")
+    )
+    if q:
+        memberships = memberships.filter(user__email__icontains=q)
+    return render(
+        request, "accounts/team_manage.html", {"memberships": memberships, "query": q}
+    )
+
+
+@login_required
+@csrf_protect
+def invite_member_view(request: HttpRequest) -> HttpResponse:
+    """Invite member (HTMX modal submit)."""
+    form = InviteForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        org = svc.membership_primary_org(request.user)
         try:
-            user = InviteService.accept_invite(
-                token=self.token,
-                password=form.cleaned_data["password1"],
-                first_name=form.cleaned_data["first_name"],
-                last_name=form.cleaned_data["last_name"],
+            invite = svc.invite_create(
+                form.cleaned_data["email"], org, form.cleaned_data["role"]
             )
-            login(self.request, user)
-            messages.success(
-                self.request, f"Welcome to {self.invite.organization.name}!"
+            link_url = svc.invite_build_link(invite, request)
+            messages.success(request, "Invitation created.")
+            # Dev-only: show link
+            return HttpResponse(
+                f"<div class='alert alert-success mb-0'>Invite URL (dev): {link_url}</div>"
             )
-            return super().form_valid(form)
-        except Exception as e:
-            logger.exception("[AcceptInvite] Error during invite acceptance")
-            form.add_error(None, str(e))
-            return self.form_invalid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["invite"] = self.invite
-        return context
+        except (ERR.InvalidEmailDomain, ERR.AlreadyMember, ERR.DuplicateInvite) as e:
+            return HttpResponse(str(e), status=400)
+    return render(request, "accounts/modals/_invite_member.html", {"form": form})
 
 
-@method_decorator(require_POST, name="dispatch")
-class RemoveTeamMemberView(TemplateView):
-    def post(self, request, *args, **kwargs):
-        logger.info("Team member removal requested (placeholder)")
-        return HttpResponse("Removed", status=200)
+@login_required
+@csrf_protect
+def change_member_role_view(request: HttpRequest, member_id: int) -> HttpResponse:
+    """Change member role (inline select)."""
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required.")
+    m = get_object_or_404(Membership, pk=member_id)
+    from accounts import choices as CH  # local import to avoid global coupling
+
+    new_role = request.POST.get("role")
+    if new_role not in CH.MembershipRole.values:
+        return HttpResponseBadRequest("Invalid role.")
+    svc.membership_change_role(m, new_role)
+    return team_members_partial_view(request)
 
 
-# ====================================================================
+@login_required
+def team_members_partial_view(request: HttpRequest) -> HttpResponse:
+    """Render members table partial (HTMX target)."""
+    org = svc.membership_primary_org(request.user)
+    q = (request.GET.get("q") or "").strip().lower()
+    memberships = (
+        Membership.objects.filter(organization=org, is_active=True)
+        .select_related("user")
+        .order_by("user__email")
+    )
+    if q:
+        memberships = memberships.filter(user__email__icontains=q)
+    return render(
+        request, "accounts/partials/_member_table.html", {"memberships": memberships}
+    )
 
 
-class SubmitAssessmentForReviewView(LoginRequiredMixin, View):
-    def post(self, request, pk, *args, **kwargs):
-        assessment = get_object_or_404(Assessment, pk=pk)
+@login_required
+@csrf_protect
+def remove_member_view(request: HttpRequest, member_id: int) -> HttpResponse:
+    """Remove member (HTMX modal confirm)."""
+    m = get_object_or_404(Membership, pk=member_id)
+    if request.method == "POST":
+        try:
+            svc.membership_remove_member(request.user, m)
+            messages.success(request, "Member removed.")
+            return team_members_partial_view(request)
+        except ERR.LastOwnerRemovalError as e:
+            return HttpResponse(str(e), status=400)
+    return render(request, "accounts/modals/_remove_member.html", {"membership": m})
 
-        # Only allow status transition from draft to review
-        if assessment.status == "draft":
-            assessment.status = "review"
-            assessment.save()
 
-        return redirect("assessments:assessment_detail", pk=pk)
+# ===== Invite accept (public) =================================================
+@csrf_protect
+def accept_invite_view(request: HttpRequest) -> HttpResponse:
+    """Accept invite by token."""
+    if request.method == "POST":
+        form = AcceptInviteForm(request.POST)
+        if form.is_valid():
+            try:
+                svc.invite_accept(
+                    token=form.cleaned_data["token"],
+                    password=form.cleaned_data["password"],
+                    first_name=form.cleaned_data.get("first_name", ""),
+                    last_name=form.cleaned_data.get("last_name", ""),
+                )
+                messages.success(request, "Invite accepted. You can sign in now.")
+                return redirect("accounts:login")
+            except (ERR.InvalidInvite, ERR.BusinessRuleError) as e:
+                messages.error(request, str(e))
+    else:
+        form = AcceptInviteForm(initial={"token": request.GET.get("token", "")})
+    return render(request, "accounts/accept_invite.html", {"form": form})

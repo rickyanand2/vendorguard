@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_protect
 
+from common.models import DataType
 from services.services_vendors import (
     archive_vendor,
     archive_vendor_offering,
@@ -13,9 +14,8 @@ from services.services_vendors import (
     update_vendor_offering,
     update_vendor_with_trust,
 )
-from vendors.forms import VendorForm, VendorOfferingForm, VendorTrustProfileForm
-from vendors.models import Vendor, VendorOffering, VendorTrustProfile
-from common.models import DataType
+from vendors.forms import VendorForm, VendorOfferingForm
+from vendors.models import Vendor, VendorOffering
 
 # ─────────────────────────────────────────────
 # 🔹 Vendor Views

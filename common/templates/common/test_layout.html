@@ -8,9 +8,9 @@
   <h1 class="mb-4 fw-bold fs-3">🧪 UI Layout Test Page</h1>
   <p class="mb-4 text-muted">This page tests layout components (forms, badges, tables, modals, etc.) for reuse across VendorGuard.</p>
 
-  <!--                            ============================
+  <!--                             ============================
        🎨 BUTTONS + BADGES
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <div class="mb-3 d-flex gap-3">
       <a href="#" class="btn btn-primary">Primary</a>
@@ -23,9 +23,9 @@
     </div>
   </section>
 
-  <!--                            ============================
+  <!--                             ============================
        📣 ALERT MESSAGES
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <h4 class="mb-3 fw-bold border-bottom pb-2">📄 Message Alert Styles</h4>
     {% for tag in alert_tags %}
@@ -36,18 +36,18 @@
     {% endfor %}
   </section>
 
-  <!--                            ============================
+  <!--                             ============================
        💬 MODAL COMPONENT
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <h4 class="mb-3 fw-bold border-bottom pb-2">📄 Modal Component</h4>
     {% include 'common/modal.html' with modal_id='testModal' modal_title='Demo Modal' modal_body='This is a test modal rendered via include.' %}
     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#testModal">Launch Modal</button>
   </section>
 
-  <!--                            ============================
+  <!--                             ============================
        🔁 FORM EXAMPLES
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <div class="container mt-5">
       <!-- ✅ Auto Layout -->
@@ -87,9 +87,9 @@
     </div>
   </section>
 
-  <!--                            ============================
+  <!--                             ============================
        📋 TABLE + FILTER
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <h4 class="mb-3 fw-bold">📋 Table/List UI Component</h4>
     <div class="row mb-3">
@@ -153,9 +153,9 @@
     </nav>
   </section>
 
-  <!--                            ============================
+  <!--                             ============================
        🧱 CARD-BASED METRICS
-  ============================                            -->
+  ============================                             -->
   <section class="mb-5">
     <h4 class="mb-3 fw-bold">📦 Card-Based Summary</h4>
     <div class="row g-4">

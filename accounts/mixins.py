@@ -3,7 +3,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
 
-from accounts.constants import ROLE_OWNER
+from accounts.choices import ROLE_OWNER
 from services.memberships import get_user_membership
 
 

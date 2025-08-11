@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# Application definition
+# --- Apps -----------------------------------------------------------------------------
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -37,19 +37,20 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    ### Other apps
+    # Third-party
     "widget_tweaks",
     "taggit",
-    ### Custom Apps
-    "accounts.apps.AccountsConfig",  # Authentication and Authorization | Full path for super user creation
-    "website",  # Also has template tags
+    # First-party apps
+    "accounts.apps.AccountsConfig",  # Custom user, orgs, invites, auth
+    "website",
     "dashboard",
     "vendors",
-    "assessments",  # Third party risk assessments
+    "assessments",
     "workflow",
-    "common",  # To add Audit Log
+    "common",
 ]
 
+# --- Middleware -----------------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -66,6 +67,8 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+
+# --- Templates ------------------------------------------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -85,18 +88,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# --- Database (Postgres) --------------------------------------------------------------
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-""" #Comment out baseic
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-"""
 
 DATABASES = {
     "default": {
@@ -109,6 +104,7 @@ DATABASES = {
     }
 }
 
+# --- Password validation --------------------------------------------------------------
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -143,7 +139,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-
+# --- Static files ---------------------------------------------------------------------
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -157,6 +153,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# --- Auth -----------------------------------------------------------------------------
 ### Custom User model
 AUTH_USER_MODEL = "accounts.CustomUser"
 
@@ -166,3 +163,21 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 # LOGOUT_REDIRECT_URL = "/home/"
 
 LOGIN_URL = "/accounts/login/"  # this is correct and must NOT be the same as LOGOUT_REDIRECT_URL
+
+
+# --- Email (dev-friendly; replace in prod) --------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@vendorguard.local"
+
+# --- Sessions (use Django’s framework; sliding idle timeout) --------------------------
+SESSION_COOKIE_AGE = 60 * 60  # 60 minutes idle timeout window
+SESSION_SAVE_EVERY_REQUEST = True  # sliding sessions: refresh expiry on activity
+# Optional: cached DB sessions in prod (configure CACHES first)
+# SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+
+# --- Security (tighten in prod) -------------------------------------------------------
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_HSTS_SECONDS = 31536000
+# SECURE_SSL_REDIRECT = True
+# CSRF_TRUSTED_ORIGINS = ["https://your-domain.tld"]

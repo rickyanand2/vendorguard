@@ -1,18 +1,22 @@
-from .models import Membership
+"""Template context helpers."""
+
+from accounts.models import Membership
 
 
 def user_membership(request):
-    if not request.user.is_authenticated:
-        return {}
-
+    """Expose the current user's primary membership/org to templates."""
+    org = None
     try:
-        membership = Membership.objects.select_related("organization").get(
-            user=request.user
-        )
-        return {
-            "user_membership": membership,
-            "user_organization": membership.organization,
-            "is_org_owner": membership.role == "owner",  # ✅ Use this check
-        }
-    except Membership.DoesNotExist:
-        return {}
+        if request.user.is_authenticated:
+            m = (
+                Membership.objects.filter(
+                    user=request.user, is_active=True, is_primary=True
+                )
+                .select_related("organization")
+                .first()
+            )
+            if m:
+                org = m.organization
+    except Exception:
+        org = None
+    return {"current_org": org}

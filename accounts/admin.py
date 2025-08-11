@@ -1,4 +1,7 @@
+# accounts/admin.py
 """Admin bindings for accounts (email-as-username)."""
+
+from __future__ import annotations
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -10,16 +13,15 @@ from .models import (
     CustomUser,
     EmailVerificationToken,
     Invite,
+    License,
     Membership,
     Organization,
     OrganizationAccessRule,
     PasswordResetToken,
     RecoveryCode,
-    License,
 )
 
 
-# ---------- Admin-only forms (do NOT use in views) ----------
 class AdminUserCreationForm(UserCreationForm):
     """Create user via admin."""
 
@@ -36,7 +38,6 @@ class AdminUserChangeForm(UserChangeForm):
         fields = "__all__"
 
 
-# ---------- CustomUser admin ----------
 @admin.register(CustomUser)
 class CustomUserAdmin(BaseUserAdmin):
     """Email as username admin."""
@@ -130,7 +131,6 @@ class CustomUserAdmin(BaseUserAdmin):
     filter_horizontal = ("groups", "user_permissions")
 
 
-# ---------- Organization ----------
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
     list_display = ("name", "domain", "status", "is_active", "require_mfa")
@@ -139,7 +139,6 @@ class OrganizationAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
 
-# ---------- Membership ----------
 @admin.register(Membership)
 class MembershipAdmin(admin.ModelAdmin):
     list_display = (
@@ -156,7 +155,6 @@ class MembershipAdmin(admin.ModelAdmin):
     ordering = ("organization__name", "user__email")
 
 
-# ---------- Access rules ----------
 @admin.register(OrganizationAccessRule)
 class OrganizationAccessRuleAdmin(admin.ModelAdmin):
     list_display = ("organization", "action", "cidr", "is_active", "created_at")
@@ -165,7 +163,6 @@ class OrganizationAccessRuleAdmin(admin.ModelAdmin):
     autocomplete_fields = ("organization",)
 
 
-# ---------- License ----------
 @admin.register(License)
 class LicenseAdmin(admin.ModelAdmin):
     list_display = ("organization", "plan", "start_date", "end_date", "is_trial")
@@ -174,7 +171,6 @@ class LicenseAdmin(admin.ModelAdmin):
     autocomplete_fields = ("organization",)
 
 
-# ---------- Invites & tokens ----------
 @admin.register(Invite)
 class InviteAdmin(admin.ModelAdmin):
     list_display = (

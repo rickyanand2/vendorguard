@@ -1,12 +1,19 @@
-"""Enums (TextChoices) and constants for the accounts app (data-only)."""
+# accounts/choices.py
+"""Centralized enums (TextChoices) and constants for the accounts app."""
 
 from django.db import models
 
-# ===== Enums =================================================================
+
+class PlanChoices(models.TextChoices):
+    """Subscription plans for `License.plan`."""
+
+    STANDARD = "standard", "Standard"
+    TEAMS = "teams", "Teams"
+    ENTERPRISE = "enterprise", "Enterprise"
 
 
 class MembershipRole(models.TextChoices):
-    """Organization membership roles."""
+    """RBAC roles for `Membership.role`."""
 
     OWNER = "owner", "Owner"
     ADMIN = "admin", "Admin"
@@ -15,42 +22,32 @@ class MembershipRole(models.TextChoices):
 
 
 class OrganizationStatus(models.TextChoices):
-    """Organization lifecycle state."""
+    """Lifecycle state for `Organization.status`."""
 
     ACTIVE = "active", "Active"
     SUSPENDED = "suspended", "Suspended"
     ARCHIVED = "archived", "Archived"
 
 
-class AuthEventType(models.TextChoices):
-    """Auth/audit event types."""
-
-    LOGIN_SUCCESS = "login_success", "Login Success"
-    LOGIN_FAILED = "login_failed", "Login Failed"
-    LOGOUT = "logout", "Logout"
-    PASSWORD_CHANGE = "password_change", "Password Change"
-    MFA_ENABLED = "mfa_enabled", "MFA Enabled"
-    MFA_DISABLED = "mfa_disabled", "MFA Disabled"
-    EMAIL_VERIFIED = "email_verified", "Email Verified"
-
-
 class AccessRuleAction(models.TextChoices):
-    """Org network policy action."""
+    """Network policy action for `OrganizationAccessRule.action`."""
 
     ALLOW = "allow", "Allow"
     DENY = "deny", "Deny"
 
 
-class PlanChoices(models.TextChoices):
-    """Available subscription plans."""
+class AuthEventType(models.TextChoices):
+    """Audit trail events for `AuthEvent.event`."""
 
-    STANDARD = "standard", "Standard"
-    TEAMS = "teams", "Teams"
-    ENTERPRISE = "enterprise", "Enterprise"
+    LOGIN_SUCCESS = "login_success", "Login Success"
+    LOGIN_FAILED = "login_failed", "Login Failed"
+    LOGOUT = "logout", "Logout"
+    PASSWORD_RESET = "password_reset", "Password Reset"
+    EMAIL_VERIFIED = "email_verified", "Email Verified"
 
 
-# ===== Constants (no logic) ===================================================
-
+# Public/free email domains blocked when a business email is required.
+# Keep this list small and pragmatic; enforcement lives in services.
 BLOCKED_EMAIL_DOMAINS = {
     "gmail.com",
     "yahoo.com",
@@ -58,16 +55,6 @@ BLOCKED_EMAIL_DOMAINS = {
     "hotmail.com",
     "icloud.com",
     "protonmail.com",
-}
-
-INVITE_EXPIRY_DAYS = 7
-EMAIL_VERIFICATION_EXPIRY_MINUTES = 30
-PASSWORD_RESET_EXPIRY_HOURS = 2
-
-SECURITY_DEFAULTS = {
-    "password_min_length": 12,
-    "max_failed_logins": 7,
-    "lockout_minutes": 15,
-    "session_timeout_minutes": 60,
-    "enforce_business_email": True,
+    "live.com",
+    "aol.com",
 }

@@ -1,47 +1,42 @@
-"""Shared domain exceptions (cross-app)."""
-
-from django.core.exceptions import PermissionDenied
+# common/errors.py
+"""Shared exception types used across apps."""
 
 
 class BusinessRuleError(Exception):
-    """Generic business rule failure."""
-
-
-class AlreadyMember(BusinessRuleError):
-    """User already in organization."""
-
-
-class DuplicateInvite(BusinessRuleError):
-    """Duplicate pending invite exists."""
-
-
-class InvalidInvite(BusinessRuleError):
-    """Invite token invalid/expired."""
-
-
-class InvalidToken(BusinessRuleError):
-    """Verification/reset token invalid."""
-
-
-class LastOwnerRemovalError(BusinessRuleError):
-    """Would remove last owner."""
+    """Generic business rule violation."""
 
 
 class InvalidEmailDomain(BusinessRuleError):
-    """Non-business email rejected."""
+    """Email domain not allowed (free domain or org mismatch)."""
 
 
-class LicenseExpired(PermissionDenied):
-    """License not current."""
+class DuplicateInvite(BusinessRuleError):
+    """An active invite already exists for this email & org."""
 
 
-class LockedOut(PermissionDenied):
-    """Account temporarily locked."""
+class AlreadyMember(BusinessRuleError):
+    """User already exists and is a member of the org."""
 
 
-class MFARequired(PermissionDenied):
-    """MFA required by policy."""
+class InvalidInvite(BusinessRuleError):
+    """Invite token invalid or expired."""
 
 
-class IPAccessDenied(PermissionDenied):
-    """IP blocked by policy."""
+class InvalidToken(BusinessRuleError):
+    """Verification/reset token invalid or expired."""
+
+
+class LastOwnerRemovalError(BusinessRuleError):
+    """Refuse action that would leave org with no owner."""
+
+
+class LockedOut(BusinessRuleError):
+    """User temporarily locked due to failed attempts."""
+
+
+class MFARequired(BusinessRuleError):
+    """Org requires MFA but user doesn't have it enabled."""
+
+
+class IPAccessDenied(BusinessRuleError):
+    """Login IP not allowed by org access rules."""

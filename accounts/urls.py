@@ -1,4 +1,6 @@
 # accounts/urls.py
+"""URL routes for accounts FBVs."""
+
 from django.urls import path
 
 from accounts import views as v

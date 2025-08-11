@@ -1,5 +1,7 @@
 # accounts/views.py
-"""Function-based views for accounts."""
+"""Function-based views for accounts (HTMX-friendly, no business logic)."""
+
+from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -45,7 +47,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
                         request, "accounts/login.html", {"form": form}, status=403
                     )
 
-                login(request, user)  # Django session rotation
+                login(request, user)  # session rotation handled by Django
                 svc.auth_record_successful_login(
                     user,
                     ip=request.META.get("REMOTE_ADDR"),
@@ -54,7 +56,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 messages.success(request, "Welcome back!")
                 return redirect("accounts:team_manage")
             else:
-                # On failure, increment lockout if user exists.
+                # Increment failed counter if the email exists
                 from accounts.models import CustomUser
 
                 try:
@@ -78,7 +80,7 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 # ===== Registration ===========================================================
 @csrf_protect
 def register_solo_view(request: HttpRequest) -> HttpResponse:
-    """Register solo account."""
+    """Register a solo owner (business email enforced)."""
     if request.method == "POST":
         form = RegisterSoloForm(request.POST)
         if form.is_valid():
@@ -90,7 +92,7 @@ def register_solo_view(request: HttpRequest) -> HttpResponse:
                     last_name=form.cleaned_data["last_name"],
                     job_title=form.cleaned_data.get("job_title"),
                 )
-                token = svc.email_issue_token(user)
+                token = svc.email_issue_token(user)  # dev flow shows token
                 messages.success(request, f"Verify email with token (dev): {token}")
                 return redirect("accounts:login")
             except ERR.InvalidEmailDomain as e:
@@ -102,7 +104,7 @@ def register_solo_view(request: HttpRequest) -> HttpResponse:
 
 @csrf_protect
 def register_team_owner_view(request: HttpRequest) -> HttpResponse:
-    """Register team owner."""
+    """Register team owner and create org."""
     if request.method == "POST":
         form = RegisterTeamOwnerForm(request.POST)
         if form.is_valid():
@@ -116,7 +118,7 @@ def register_team_owner_view(request: HttpRequest) -> HttpResponse:
                     domain=form.cleaned_data.get("domain"),
                     job_title=form.cleaned_data.get("job_title"),
                 )
-                token = svc.email_issue_token(user)
+                token = svc.email_issue_token(user)  # dev flow shows token
                 messages.success(request, f"Verify email with token (dev): {token}")
                 return redirect("accounts:login")
             except ERR.InvalidEmailDomain as e:
@@ -143,7 +145,7 @@ def email_verify_view(request: HttpRequest) -> HttpResponse:
 
 @csrf_protect
 def password_reset_request_view(request: HttpRequest) -> HttpResponse:
-    """Start password reset (dev-friendly)."""
+    """Start password reset (dev-friendly token)."""
     form = PasswordResetRequestForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         from accounts.models import CustomUser
@@ -206,8 +208,7 @@ def invite_member_view(request: HttpRequest) -> HttpResponse:
                 form.cleaned_data["email"], org, form.cleaned_data["role"]
             )
             link_url = svc.invite_build_link(invite, request)
-            messages.success(request, "Invitation created.")
-            # Dev-only: show link
+            # dev: inline success content for modal body
             return HttpResponse(
                 f"<div class='alert alert-success mb-0'>Invite URL (dev): {link_url}</div>"
             )
@@ -223,7 +224,7 @@ def change_member_role_view(request: HttpRequest, member_id: int) -> HttpRespons
     if request.method != "POST":
         return HttpResponseBadRequest("POST required.")
     m = get_object_or_404(Membership, pk=member_id)
-    from accounts import choices as CH  # local import to avoid global coupling
+    from accounts import choices as CH  # local import to keep global imports lean
 
     new_role = request.POST.get("role")
     if new_role not in CH.MembershipRole.values:
@@ -257,7 +258,6 @@ def remove_member_view(request: HttpRequest, member_id: int) -> HttpResponse:
     if request.method == "POST":
         try:
             svc.membership_remove_member(request.user, m)
-            messages.success(request, "Member removed.")
             return team_members_partial_view(request)
         except ERR.LastOwnerRemovalError as e:
             return HttpResponse(str(e), status=400)

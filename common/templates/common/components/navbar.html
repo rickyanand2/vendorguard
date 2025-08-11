@@ -5,7 +5,7 @@
     {% if user.is_authenticated %}
       {% if user.is_owner %}
         <a href="{% url 'dashboard:dashboard' %}" class="me-3 text-muted text-decoration-none">Dashboard</a>
-        <a href="{% url 'accounts:manage_team' %}" class="me-3 text-muted text-decoration-none">Team</a>
+        <a href="{% url 'accounts:team_manage' %}" class="me-3 text-muted text-decoration-none">Team</a>
       {% endif %}
       <div class="dropdown me-3">
         <a class="text-muted text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Assessments</a>

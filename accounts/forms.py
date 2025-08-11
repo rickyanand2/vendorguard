@@ -1,4 +1,7 @@
+# accounts/forms.py
 """Forms for accounts FBVs (validation only; no business logic)."""
+
+from __future__ import annotations
 
 from django import forms
 
@@ -13,7 +16,7 @@ class LoginForm(forms.Form):
 
 
 class RegisterSoloForm(forms.Form):
-    """Solo registration."""
+    """Solo registration (business email enforced in services)."""
 
     email = forms.EmailField()
     password = forms.CharField(widget=forms.PasswordInput)
@@ -39,8 +42,7 @@ class InviteForm(forms.Form):
 
     email = forms.EmailField()
     role = forms.ChoiceField(
-        choices=CH.MembershipRole.choices,
-        initial=CH.MembershipRole.MEMBER,
+        choices=CH.MembershipRole.choices, initial=CH.MembershipRole.MEMBER
     )
 
 

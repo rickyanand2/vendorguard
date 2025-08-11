@@ -1,17 +1,19 @@
-"""Accounts services (functional): registration, invites, membership, auth & policy."""
+# services/services_accounts.py
+"""Accounts domain services (function-based, no Django model business logic)."""
 
 from __future__ import annotations
 
-import logging
+import ipaddress
+from dataclasses import dataclass
+from datetime import timedelta
 from typing import Optional
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+import common.errors as ERR
 from accounts import choices as CH
 from accounts.models import (
     AuthEvent,
@@ -23,203 +25,180 @@ from accounts.models import (
     OrganizationAccessRule,
     PasswordResetToken,
 )
-import common.errors as ERR
-
-logger = logging.getLogger(__name__)
-
-# ========= helpers =============================================================
 
 
-def _now():
-    """Current timezone-aware datetime."""
-    return timezone.now()
+# ===== Helpers =================================================================
+def _extract_domain(email: str) -> str:
+    """Return lowercase domain part of an email."""
+    return (email or "").split("@")[-1].lower().strip()
 
 
-def extract_domain(email: str) -> str:
-    """Return domain part of email."""
-    return email.split("@", 1)[1].lower()
-
-
-def is_blocked_domain(domain: str) -> bool:
-    """True if public/free domain."""
+def _is_blocked_domain(domain: str) -> bool:
+    """True if domain is in the public/free blocklist."""
     return domain in CH.BLOCKED_EMAIL_DOMAINS
 
 
-def is_email_allowed_for_org(email: str, org: Organization) -> bool:
-    """Business email allowed by org policy."""
-    domain = extract_domain(email)
-    if org.enforce_business_email and is_blocked_domain(domain):
+def _require_business_email(email: str, expected_domain: Optional[str] = None) -> None:
+    """Validate that email is from a business domain and (optionally) matches expected."""
+    domain = _extract_domain(email)
+    if _is_blocked_domain(domain):
+        raise ERR.InvalidEmailDomain(
+            "Please use your business email (public domains are not allowed)."
+        )
+    if expected_domain and domain != expected_domain.lower():
+        raise ERR.InvalidEmailDomain(
+            "Email domain must match the organization's domain."
+        )
+
+
+def _ip_allowed_for_org(org: Organization, ip: Optional[str]) -> bool:
+    """Evaluate org IP allow/deny rules against an IP string."""
+    if not ip or not org.access_rules.filter(is_active=True).exists():
+        return True  # no rule -> allow
+
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except ValueError:
         return False
-    if org.domain:
-        return domain == org.domain.lower()
+
+    rules = list(org.access_rules.filter(is_active=True))
+    # Deny wins
+    for r in rules:
+        try:
+            cidr = ipaddress.ip_network(r.cidr, strict=False)
+        except ValueError:
+            continue
+        if ip_obj in cidr and r.action == CH.AccessRuleAction.DENY:
+            return False
+
+    # If any ALLOW exists, IP must match at least one
+    allows = [r for r in rules if r.action == CH.AccessRuleAction.ALLOW]
+    if allows:
+        for r in allows:
+            try:
+                cidr = ipaddress.ip_network(r.cidr, strict=False)
+            except ValueError:
+                continue
+            if ip_obj in cidr:
+                return True
+        return False
+
+    # Only DENYs exist and none matched -> allow
     return True
 
 
-def build_absolute(request, path: str) -> str:
-    """Absolute URL for a path."""
-    return request.build_absolute_uri(path)
-
-
-# ========= membership ==========================================================
-
-
-@transaction.atomic
-def membership_add_member(
-    user: CustomUser,
-    org: Organization,
-    role: str = CH.MembershipRole.MEMBER,
-    make_primary: bool = False,
-) -> Membership:
-    """Add user to org; set primary if none exists or requested."""
-    if Membership.objects.filter(user=user, organization=org, is_active=True).exists():
-        raise ERR.AlreadyMember("User is already a member of this organization.")
-    m = Membership.objects.create(
-        user=user, organization=org, role=role, is_active=True
-    )
-    has_other_active = (
-        Membership.objects.filter(user=user, is_active=True).exclude(pk=m.pk).exists()
-    )
-    if make_primary or not has_other_active:
-        Membership.objects.filter(user=user, is_primary=True).update(is_primary=False)
-        m.is_primary = True
-        m.save(update_fields=["is_primary"])
-    return m
-
-
-@transaction.atomic
-def membership_remove_member(actor: CustomUser, membership: Membership) -> None:
-    """Deactivate membership; protect last owner."""
-    org = membership.organization
-    if membership.role == CH.MembershipRole.OWNER:
-        owners = Membership.objects.filter(
-            organization=org, role=CH.MembershipRole.OWNER, is_active=True
-        )
-        if owners.count() <= 1 and membership.user_id == actor.id:
-            raise ERR.LastOwnerRemovalError(
-                "You cannot remove the last remaining owner."
-            )
-    membership.is_active = False
-    membership.is_primary = False
-    membership.save(update_fields=["is_active", "is_primary"])
-
-
-@transaction.atomic
-def membership_change_role(membership: Membership, new_role: str) -> Membership:
-    """Change role; ensure org keeps at least one owner."""
-    if (
-        membership.role == CH.MembershipRole.OWNER
-        and new_role != CH.MembershipRole.OWNER
-    ):
-        others = Membership.objects.filter(
-            organization=membership.organization,
-            role=CH.MembershipRole.OWNER,
-            is_active=True,
-        ).exclude(pk=membership.pk)
-        if not others.exists():
-            raise ERR.LastOwnerRemovalError(
-                "Organization must have at least one owner."
-            )
-    membership.role = new_role
-    membership.save(update_fields=["role"])
-    return membership
-
-
 def membership_primary_org(user: CustomUser) -> Optional[Organization]:
-    """Return user's primary org (or first active org)."""
+    """Return user's primary org (or first active)."""
     m = (
-        user.memberships.filter(is_active=True, is_primary=True)
-        .select_related("organization")
+        Membership.objects.select_related("organization")
+        .filter(user=user, is_active=True, is_primary=True)
+        .first()
+        or Membership.objects.select_related("organization")
+        .filter(user=user, is_active=True)
+        .order_by("organization__name")
         .first()
     )
-    if m:
-        return m.organization
-    any_m = (
-        user.memberships.filter(is_active=True).select_related("organization").first()
+    return m.organization if m else None
+
+
+# ===== Auth guards & audit =====================================================
+def auth_guard_login_attempt(user: CustomUser, ip: Optional[str], ua: str = "") -> None:
+    """Enforce lockout, MFA policy, and IP rules before allowing login."""
+    # Locked out?
+    now = timezone.now()
+    if user.locked_until and user.locked_until > now:
+        raise ERR.LockedOut("Too many failed attempts. Please try again later.")
+
+    # Find org policy (use primary org if available)
+    org = membership_primary_org(user)
+    if org:
+        # IP policy
+        if not _ip_allowed_for_org(org, ip):
+            raise ERR.IPAccessDenied("Your IP address is not allowed to sign in.")
+
+        # MFA policy
+        if org.require_mfa and not user.mfa_enabled:
+            raise ERR.MFARequired(
+                "This organization requires MFA. Please enable MFA to continue."
+            )
+
+
+def auth_record_successful_login(
+    user: CustomUser, ip: Optional[str], ua: str = ""
+) -> None:
+    """Reset counters and record audit event."""
+    user.failed_login_count = 0
+    user.locked_until = None
+    user.last_login_ip = ip
+    user.save(update_fields=["failed_login_count", "locked_until", "last_login_ip"])
+
+    AuthEvent.objects.create(
+        user=user, event=CH.AuthEventType.LOGIN_SUCCESS, ip=ip, user_agent=ua
     )
-    return any_m.organization if any_m else None
 
 
-# ========= registration ========================================================
+def auth_record_failed_login(user: CustomUser) -> None:
+    """Increment counters, possibly lock account, and record audit event."""
+    # Get org policy knobs (fallbacks)
+    org = membership_primary_org(user)
+    max_fails = (org.max_failed_logins if org else 7) or 7
+    lock_minutes = (org.lockout_minutes if org else 15) or 15
+
+    user.failed_login_count = (user.failed_login_count or 0) + 1
+    if user.failed_login_count >= max_fails:
+        user.locked_until = timezone.now() + timedelta(minutes=lock_minutes)
+        user.failed_login_count = 0  # reset after lock
+
+    user.save(update_fields=["failed_login_count", "locked_until"])
+    AuthEvent.objects.create(user=user, event=CH.AuthEventType.LOGIN_FAILED)
+
+
+# ===== Registration ============================================================
+def _create_org(name: str, domain: str) -> Organization:
+    """Create a business org (unique domain)."""
+    return Organization.objects.create(
+        name=name,
+        is_personal=False,  # business service -> team orgs
+        domain=domain.lower(),
+        is_active=True,
+    )
+
+
+def _create_owner_membership(user: CustomUser, org: Organization) -> Membership:
+    """Link user as owner to org."""
+    return Membership.objects.create(
+        user=user, organization=org, role=CH.MembershipRole.OWNER
+    )
 
 
 @transaction.atomic
-def registration_register_solo_user(
-    email: str,
-    password: str,
-    first_name: str,
-    last_name: str,
-    job_title: Optional[str] = None,
-) -> CustomUser:
-    """Create personal org + owner membership + user."""
-    domain = extract_domain(email)
-    org = Organization.objects.create(
-        name=f"{first_name}'s Workspace",
-        is_personal=True,
-        domain=domain,
-        is_active=True,
-    )
-    user = CustomUser.objects.create_user(
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-        job_title=job_title,
-        is_active=True,
-    )
-    membership_add_member(
-        user=user, org=org, role=CH.MembershipRole.OWNER, make_primary=True
-    )
-    return user
-
-
-@transaction.atomic
-def registration_register_team_owner(
-    email: str,
-    password: str,
-    first_name: str,
-    last_name: str,
-    org_name: str,
-    domain: Optional[str] = None,
-    job_title: Optional[str] = None,
-) -> CustomUser:
-    """Create team org + owner membership + user."""
-    domain = domain or extract_domain(email)
-    org = Organization.objects.create(
-        name=org_name, is_personal=False, domain=domain, is_active=True
-    )
-    user = CustomUser.objects.create_user(
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-        job_title=job_title,
-        is_active=True,
-    )
-    membership_add_member(
-        user=user, org=org, role=CH.MembershipRole.OWNER, make_primary=True
-    )
-    return user
-
-
 def registration_guarded_solo(
-    *,
     email: str,
     password: str,
     first_name: str,
     last_name: str,
     job_title: Optional[str] = None,
 ) -> CustomUser:
-    """Solo registration with business email enforcement."""
-    domain = extract_domain(email)
-    if is_blocked_domain(domain):
-        raise ERR.InvalidEmailDomain("Personal/free email domains are not allowed.")
-    return registration_register_solo_user(
-        email, password, first_name, last_name, job_title
+    """Register a 'solo' owner but still as a business org (unique domain)."""
+    domain = _extract_domain(email)
+    _require_business_email(email)
+    # Create org (name can be domain-based or person-based)
+    org = _create_org(name=f"{first_name} {last_name} ({domain})", domain=domain)
+
+    user = CustomUser.objects.create_user(
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+        job_title=job_title,
+        is_active=True,
     )
+    _create_owner_membership(user, org)
+    return user
 
 
+@transaction.atomic
 def registration_guarded_team_owner(
-    *,
     email: str,
     password: str,
     first_name: str,
@@ -228,54 +207,121 @@ def registration_guarded_team_owner(
     domain: Optional[str] = None,
     job_title: Optional[str] = None,
 ) -> CustomUser:
-    """Team registration with business email enforcement."""
-    if domain is None:
-        domain = extract_domain(email)
-    if is_blocked_domain(domain):
-        raise ERR.InvalidEmailDomain(
-            "Personal/free email domains are not allowed for team registration."
-        )
-    return registration_register_team_owner(
-        email, password, first_name, last_name, org_name, domain, job_title
+    """Register team owner and create org with explicit/matched domain."""
+    inferred = _extract_domain(email)
+    target_domain = (domain or inferred).lower()
+    _require_business_email(email, expected_domain=target_domain)
+
+    org = _create_org(name=org_name, domain=target_domain)
+
+    user = CustomUser.objects.create_user(
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+        job_title=job_title,
+        is_active=True,
     )
+    _create_owner_membership(user, org)
+    return user
 
 
-# ========= invites =============================================================
+# ===== Email verification & password reset ====================================
+TOKEN_TTL_MINUTES = 30  # 30-minute expiry
 
 
-def _invite_assert_email_allowed(email: str, org: Organization) -> None:
-    """Raise if email violates org policy."""
-    if not is_email_allowed_for_org(email, org):
-        raise ERR.InvalidEmailDomain(
-            "Only business emails matching your organization domain are allowed."
+def email_issue_token(user: CustomUser) -> str:
+    """Create a short-lived email verification token and return it (dev flow)."""
+    token = get_random_string(48)
+    EmailVerificationToken.objects.create(user=user, token=token)
+    return token
+
+
+def email_verify(token: str) -> None:
+    """Verify email token within TTL; mark user verified."""
+    try:
+        rec = EmailVerificationToken.objects.select_related("user").get(token=token)
+    except EmailVerificationToken.DoesNotExist:
+        raise ERR.InvalidToken("Invalid or expired token.")
+
+    if rec.used_at:
+        raise ERR.InvalidToken("Token already used.")
+    if timezone.now() - rec.created_at > timedelta(minutes=TOKEN_TTL_MINUTES):
+        raise ERR.InvalidToken("Token expired. Please request a new one.")
+
+    u = rec.user
+    u.is_verified_email = True
+    u.email_verified_at = timezone.now()
+    u.save(update_fields=["is_verified_email", "email_verified_at"])
+
+    rec.used_at = timezone.now()
+    rec.save(update_fields=["used_at"])
+
+    AuthEvent.objects.create(user=u, event=CH.AuthEventType.EMAIL_VERIFIED)
+
+
+def password_issue_reset(user: CustomUser) -> str:
+    """Create a short-lived password reset token (dev flow)."""
+    token = get_random_string(48)
+    PasswordResetToken.objects.create(user=user, token=token)
+    return token
+
+
+def password_reset_with_token(token: str, new_password: str) -> None:
+    """Reset password if token is valid within TTL."""
+    try:
+        rec = PasswordResetToken.objects.select_related("user").get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        raise ERR.InvalidToken("Invalid or expired token.")
+
+    if rec.used_at:
+        raise ERR.InvalidToken("Token already used.")
+    if timezone.now() - rec.created_at > timedelta(minutes=TOKEN_TTL_MINUTES):
+        raise ERR.InvalidToken("Token expired. Please request a new one.")
+
+    u = rec.user
+    u.set_password(new_password)
+    u.last_password_change = timezone.now()
+    u.save(update_fields=["password", "last_password_change"])
+
+    rec.used_at = timezone.now()
+    rec.save(update_fields=["used_at"])
+
+    AuthEvent.objects.create(user=u, event=CH.AuthEventType.PASSWORD_RESET)
+
+
+# ===== Invites ================================================================
+def _ensure_not_member(email: str, org: Organization) -> None:
+    """Raise AlreadyMember if user exists and is in org."""
+    try:
+        u = CustomUser.objects.get(email=email.lower())
+    except CustomUser.DoesNotExist:
+        return
+    if Membership.objects.filter(user=u, organization=org, is_active=True).exists():
+        raise ERR.AlreadyMember("This user is already a member of your organization.")
+
+
+def invite_create(
+    email: str, org: Organization, role: str = CH.MembershipRole.MEMBER
+) -> Invite:
+    """Validate and create an invite record."""
+    email = email.lower().strip()
+    # Domain policy
+    if org.enforce_business_email:
+        _require_business_email(
+            email, expected_domain=org.domain or _extract_domain(email)
         )
 
+    # Already a member?
+    _ensure_not_member(email, org)
 
-def _invite_assert_not_duplicate(email: str, org: Organization) -> None:
-    """Raise if a pending invite already exists."""
+    # Duplicate invite?
     exists = Invite.objects.filter(
         email=email, organization=org, is_expired=False, accepted_at__isnull=True
     ).exists()
     if exists:
-        raise ERR.DuplicateInvite("An invite has already been sent to this email.")
+        raise ERR.DuplicateInvite("An active invitation already exists for this email.")
 
-
-def _invite_assert_not_member(email: str, org: Organization) -> None:
-    """Raise if user already a member."""
-    if CustomUser.objects.filter(
-        email=email, memberships__organization=org, memberships__is_active=True
-    ).exists():
-        raise ERR.AlreadyMember("This user is already a member of the organization.")
-
-
-@transaction.atomic
-def invite_create(
-    email: str, org: Organization, role: str = CH.MembershipRole.MEMBER
-) -> Invite:
-    """Create a new invite."""
-    _invite_assert_email_allowed(email, org)
-    _invite_assert_not_member(email, org)
-    _invite_assert_not_duplicate(email, org)
     token = get_random_string(64)
     return Invite.objects.create(
         email=email, organization=org, role=role, token=token, is_expired=False
@@ -283,207 +329,79 @@ def invite_create(
 
 
 def invite_build_link(invite: Invite, request) -> str:
-    """Return absolute invite URL for this token."""
-    return build_absolute(
-        request, reverse("accounts:accept_invite") + f"?token={invite.token}"
+    """Build absolute accept-invite URL."""
+    return request.build_absolute_uri(
+        reverse("accounts:accept_invite") + f"?token={invite.token}"
     )
 
 
-def invite_send(invite: Invite) -> None:
-    """Send invite email (console backend in dev)."""
-    try:
-        send_mail(
-            subject="You're invited",
-            message=f"You've been invited to join {invite.organization.name}. Use your invite link.",
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            recipient_list=[invite.email],
-            fail_silently=True,
-        )
-    except Exception:  # pragma: no cover
-        logger.exception("Failed to send invite email")
-
-
-@transaction.atomic
 def invite_accept(
     token: str, password: str, first_name: str = "", last_name: str = ""
 ) -> CustomUser:
-    """Accept invite by token; create user and membership."""
+    """Accept invite, create user, and attach membership."""
     try:
-        invite = Invite.objects.select_for_update().get(token=token)
+        inv = Invite.objects.select_related("organization").get(token=token)
     except Invite.DoesNotExist:
         raise ERR.InvalidInvite("Invalid invite token.")
-    now = _now()
-    if (
-        invite.is_expired
-        or invite.accepted_at is not None
-        or now > invite.created_at + timezone.timedelta(days=CH.INVITE_EXPIRY_DAYS)
-    ):
-        raise ERR.InvalidInvite("This invite has expired or is no longer valid.")
-    if CustomUser.objects.filter(email=invite.email).exists():
-        raise ERR.BusinessRuleError("A user with this email already exists.")
+
+    # Validity window: 7 days (model property computed in UI; enforce here)
+    if inv.is_expired:
+        raise ERR.InvalidInvite("This invite has expired.")
+    if inv.accepted_at:
+        raise ERR.InvalidInvite("This invite has already been used.")
+
+    # Ensure not already a member
+    _ensure_not_member(inv.email, inv.organization)
+
     user = CustomUser.objects.create_user(
-        email=invite.email,
+        email=inv.email,
         password=password,
-        first_name=first_name,
-        last_name=last_name,
+        first_name=first_name or "",
+        last_name=last_name or "",
         is_active=True,
     )
-    membership_add_member(
-        user=user, org=invite.organization, role=invite.role, make_primary=True
-    )
-    invite.accepted_at = now
-    invite.save(update_fields=["accepted_at"])
+    Membership.objects.create(user=user, organization=inv.organization, role=inv.role)
+
+    inv.accepted_at = timezone.now()
+    inv.save(update_fields=["accepted_at"])
+
     return user
 
 
-def invite_expire_stale(days: int = CH.INVITE_EXPIRY_DAYS) -> int:
-    """Expire invites older than N days (returns count updated)."""
-    cutoff = _now() - timezone.timedelta(days=days)
-    qs = Invite.objects.filter(
-        accepted_at__isnull=True, is_expired=False, created_at__lte=cutoff
-    )
-    return qs.update(is_expired=True)
-
-
-# ========= auth & policy =======================================================
-
-
-def auth_log_event(
-    user: CustomUser, event: str, *, ip: Optional[str] = None, ua: str = ""
-) -> None:
-    """Write an auth event."""
-    AuthEvent.objects.create(user=user, event=event, ip=ip, user_agent=ua[:255])
-
-
-def auth_evaluate_ip_access(org: Optional[Organization], ip: Optional[str]) -> None:
-    """Deny/allow by org CIDR rules (deny-wins)."""
-    if not org or not ip:
-        return
-    rules = OrganizationAccessRule.objects.filter(organization=org, is_active=True)
-    if not rules.exists():
-        return
-    from ipaddress import ip_address, ip_network
-
-    def _match(_ip: str, cidr: str) -> bool:
-        try:
-            return ip_address(_ip) in ip_network(cidr, strict=False)
-        except Exception:
-            return False
-
-    any_deny = any(
-        _match(ip, r.cidr) for r in rules if r.action == CH.AccessRuleAction.DENY
-    )
-    if any_deny:
-        raise ERR.IPAccessDenied(
-            "Access from your IP is not allowed for this organization."
-        )
-    allows = [r for r in rules if r.action == CH.AccessRuleAction.ALLOW]
-    if allows and not any(_match(ip, r.cidr) for r in allows):
-        raise ERR.IPAccessDenied(
-            "Access from your IP is not allowed for this organization."
-        )
-
-
-@transaction.atomic
-def auth_record_failed_login(
-    user: CustomUser, org: Optional[Organization] = None
-) -> None:
-    """Bump lockout counters; set locked_until if over threshold."""
-    org = org or membership_primary_org(user)
-    max_attempts = (
-        getattr(org, "max_failed_logins", CH.SECURITY_DEFAULTS["max_failed_logins"])
-        if org
-        else CH.SECURITY_DEFAULTS["max_failed_logins"]
-    )
-    lock_minutes = (
-        getattr(org, "lockout_minutes", CH.SECURITY_DEFAULTS["lockout_minutes"])
-        if org
-        else CH.SECURITY_DEFAULTS["lockout_minutes"]
-    )
-    user.failed_login_count += 1
-    if user.failed_login_count >= int(max_attempts):
-        user.locked_until = _now() + timezone.timedelta(minutes=int(lock_minutes))
-    user.save(update_fields=["failed_login_count", "locked_until"])
-
-
-@transaction.atomic
-def auth_record_successful_login(
-    user: CustomUser, *, ip: Optional[str] = None, ua: str = ""
-) -> None:
-    """Reset lock counters and log success."""
-    user.failed_login_count = 0
-    user.locked_until = None
-    user.last_login_ip = ip
-    user.save(update_fields=["failed_login_count", "locked_until", "last_login_ip"])
-    auth_log_event(user, CH.AuthEventType.LOGIN_SUCCESS, ip=ip, ua=ua)
-
-
-def auth_guard_login_attempt(user: CustomUser, *, ip: Optional[str], ua: str) -> None:
-    """Run pre-login checks: IP, lockout, org MFA (license hook later)."""
-    org = membership_primary_org(user)
-    auth_evaluate_ip_access(org, ip)
-    if user.locked_until and _now() < user.locked_until:
-        raise ERR.LockedOut(
-            "Your account is temporarily locked. Please try again later."
-        )
-    if (org and org.require_mfa) and not user.mfa_enabled:
-        raise ERR.MFARequired("Multi-factor authentication is required to sign in.")
-
-
-# ========= email verify & password reset ======================================
-
-
-def email_issue_token(user: CustomUser) -> str:
-    """Create email verification token and return it."""
-    token = get_random_string(64)
-    EmailVerificationToken.objects.create(user=user, token=token)
-    return token
-
-
-@transaction.atomic
-def email_verify(token: str) -> CustomUser:
-    """Verify email by token."""
-    try:
-        t = EmailVerificationToken.objects.select_for_update().get(token=token)
-    except EmailVerificationToken.DoesNotExist:
-        raise ERR.InvalidToken("Invalid verification token.")
-    if t.used_at is not None or _now() > t.created_at + timezone.timedelta(
-        minutes=CH.EMAIL_VERIFICATION_EXPIRY_MINUTES
+# ===== Membership maintenance =================================================
+def membership_change_role(membership: Membership, new_role: str) -> None:
+    """Change a member's role, preserving at least one OWNER."""
+    # Prevent removing last owner
+    if (
+        membership.role == CH.MembershipRole.OWNER
+        and new_role != CH.MembershipRole.OWNER
     ):
-        raise ERR.InvalidToken("Verification token expired or already used.")
-    user = t.user
-    user.is_verified_email = True
-    user.email_verified_at = _now()
-    user.save(update_fields=["is_verified_email", "email_verified_at"])
-    t.used_at = _now()
-    t.save(update_fields=["used_at"])
-    auth_log_event(user, CH.AuthEventType.EMAIL_VERIFIED)
-    return user
+        owners = Membership.objects.filter(
+            organization=membership.organization,
+            role=CH.MembershipRole.OWNER,
+            is_active=True,
+        ).exclude(id=membership.id)
+        if not owners.exists():
+            raise ERR.LastOwnerRemovalError(
+                "An organization must have at least one owner."
+            )
+
+    membership.role = new_role
+    membership.save(update_fields=["role"])
 
 
-def password_issue_reset(user: CustomUser) -> str:
-    """Create password reset token and return it."""
-    token = get_random_string(64)
-    PasswordResetToken.objects.create(user=user, token=token)
-    return token
+def membership_remove_member(actor: CustomUser, membership: Membership) -> None:
+    """Deactivate a member; refuse removing last owner."""
+    if membership.role == CH.MembershipRole.OWNER:
+        owners = Membership.objects.filter(
+            organization=membership.organization,
+            role=CH.MembershipRole.OWNER,
+            is_active=True,
+        ).exclude(id=membership.id)
+        if not owners.exists():
+            raise ERR.LastOwnerRemovalError(
+                "An organization must have at least one owner."
+            )
 
-
-@transaction.atomic
-def password_reset_with_token(token: str, new_password: str) -> CustomUser:
-    """Reset password using token."""
-    try:
-        t = PasswordResetToken.objects.select_for_update().get(token=token)
-    except PasswordResetToken.DoesNotExist:
-        raise ERR.InvalidToken("Invalid reset token.")
-    if t.used_at is not None or _now() > t.created_at + timezone.timedelta(
-        hours=CH.PASSWORD_RESET_EXPIRY_HOURS
-    ):
-        raise ERR.InvalidToken("Reset token expired or already used.")
-    user = t.user
-    user.set_password(new_password)
-    user.last_password_change = _now()
-    user.save(update_fields=["password", "last_password_change"])
-    t.used_at = _now()
-    t.save(update_fields=["used_at"])
-    auth_log_event(user, CH.AuthEventType.PASSWORD_CHANGE)
-    return user
+    membership.is_active = False
+    membership.save(update_fields=["is_active"])

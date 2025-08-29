@@ -6,8 +6,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 
 from assessments.models import Assessment
-from services.workflow import (
-    apply_transition,
+from services.services_workflow import (
+    advance,
     get_or_create_workflow_object,
 )
 from workflow.models import Transition, Workflow
@@ -35,6 +35,6 @@ class SubmitAssessmentForReviewView(LoginRequiredMixin, View):
             return HttpResponseForbidden("No valid transition found.")
 
         # STEP 5: Apply the transition and update logs/state
-        apply_transition(request.user, assessment, transition)
+        advance(request.user, assessment, transition)
 
         return redirect("assessments:assessment_detail", pk=pk)

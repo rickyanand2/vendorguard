@@ -127,6 +127,16 @@ class Vendor(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    #######################################################
+    # Attach Workflow Fields
+    #######################################################
+    tenant_id = models.IntegerField(
+        null=True, blank=True
+    )  # enables SAME_TENANT guard (isolation)
+    status = models.CharField(
+        max_length=50, default="DRAFT"
+    )  # for MIRROR_STATE/filters/badges
+
     class Meta:
         ordering = ["name"]
         indexes = [
@@ -140,6 +150,16 @@ class Vendor(models.Model):
                 fields=["organization", "name"],
                 name="uniq_vendor_name_per_org",
             )
+        ]
+        #######################################################
+        # Workflow Meta
+        #######################################################
+        # These four custom permissions are used by the standard 4-state workflow installer
+        permissions = [
+            ("can_submit", "Can submit vendor for approval"),
+            ("can_request_changes", "Can request changes on vendor"),
+            ("can_reject", "Can reject vendor"),
+            ("can_complete", "Can mark vendor as complete"),
         ]
 
     def __str__(self) -> str:

@@ -15,7 +15,7 @@ select = [
   "UP",  # pyupgrade
 ]
 ignore = [
-  "D100", "D104", "D106", "D401", "D102",  # Optional: ignore docstring rules for now
+  "D100", "D104", "D105", "D106", "D401", "D102", "D212", "D205", # Optional: ignore docstring rules for now
 ]
 
 [lint.per-file-ignores]

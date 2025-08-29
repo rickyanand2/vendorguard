@@ -4,10 +4,10 @@ from django.shortcuts import get_object_or_404
 
 from assessments.constants import AnswerChoices
 from assessments.models import Answer, Assessment, Questionnaire
-from services.workflow import (
-    apply_transition,
+from services.services_workflow import (
+    advance,
     ensure_workflow_for_object,
-    get_available_transitions,
+    available_transitions,
 )
 from vendors.models import VendorOffering
 from workflow.models import Workflow, WorkflowObject
@@ -111,7 +111,7 @@ def submit_assessment_for_review(user, pk):
         ensure_workflow_for_object(assessment)
 
         # Check transitions
-        transitions = get_available_transitions(user, assessment)
+        transitions = available_transitions(user, assessment)
         transition = next(
             (t for t in transitions if t.to_state.name.lower() == "review"),
             None,
@@ -120,7 +120,7 @@ def submit_assessment_for_review(user, pk):
         if not transition:
             return False, "No valid transition to 'Review' available."
 
-        apply_transition(user, assessment, transition, comment="Submitted for review.")
+        advance(user, assessment, transition, comment="Submitted for review.")
         return True, "Assessment submitted for review."
     except Assessment.DoesNotExist:
         return False, "Assessment not found."

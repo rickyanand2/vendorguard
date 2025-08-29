@@ -15,7 +15,7 @@ from services.assessments import (
     handle_answer_submission,
     submit_assessment_for_review,
 )
-from services.workflow import ensure_workflow_for_object
+from services.services_workflow import ensure_workflow_for_object
 from workflow.models import WorkflowLog, WorkflowObject  # Workflow import
 
 from .forms import QuestionForm, QuestionnaireForm
@@ -135,8 +135,6 @@ class AssessmentDetailView(LoginRequiredMixin, DetailView):
             print(f"[Workflow Attach Error]: {e}")
 
         return context
-
-
 
 
 # ====================================================

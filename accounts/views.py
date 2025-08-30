@@ -70,6 +70,11 @@ def login_view(request: HttpRequest) -> HttpResponse:
     return render(request, "accounts/login.html", {"form": form})
 
 
+@login_required
+def profile_view(request):
+    return render(request, "accounts/profile.html", {"user": request.user})
+
+
 def logout_view(request: HttpRequest) -> HttpResponse:
     """Logout user."""
     logout(request)
@@ -180,20 +185,86 @@ def password_reset_confirm_view(request: HttpRequest) -> HttpResponse:
 
 # ===== Team management (HTMX-friendly) =======================================
 @login_required
+@csrf_protect
 def team_manage_view(request: HttpRequest) -> HttpResponse:
-    """Team management dashboard."""
-    q = (request.GET.get("q") or "").strip().lower()
+    """Manage Team page: shows members and handles invite POST from this page."""
     org = svc.membership_primary_org(request.user)
+    if not org:
+        messages.info(request, "You don't have a primary organization yet.")
+        return render(
+            request,
+            "accounts/manage_team.html",  # <-- your template
+            {"members": [], "form": InviteForm(), "org_domain": ""},
+        )
+
+    # POST => invite
+    form = InviteForm(request.POST or None)
+    if request.method == "POST":
+        try:
+            # If you added the admin/owner guard in services, enforce it here:
+            # svc._require_admin_or_owner(request.user, org)
+            pass
+        except Exception as e:
+            messages.error(request, str(e))
+        else:
+            if form.is_valid():
+                try:
+                    invite = svc.invite_create(
+                        form.cleaned_data["email"],
+                        org,
+                        form.cleaned_data.get("role") or CH.MembershipRole.MEMBER,
+                    )
+                    link_url = svc.invite_build_link(invite, request)
+                    messages.success(request, f"Invite created. (dev link): {link_url}")
+                    return redirect("accounts:team_manage")
+                except (
+                    ERR.InvalidEmailDomain,
+                    ERR.AlreadyMember,
+                    ERR.DuplicateInvite,
+                ) as e:
+                    messages.error(request, str(e))
+
+    # GET (or fall-through on errors) => render members
     memberships = (
         Membership.objects.filter(organization=org, is_active=True)
         .select_related("user")
         .order_by("user__email")
     )
-    if q:
-        memberships = memberships.filter(user__email__icontains=q)
     return render(
-        request, "accounts/team_manage.html", {"memberships": memberships, "query": q}
+        request,
+        "accounts/manage_team.html",  # <-- your template
+        {
+            "members": memberships,  # <-- what your template loops
+            "form": form,
+            "org_domain": org.domain or "your-domain",
+        },
     )
+
+
+@login_required
+@csrf_protect
+def remove_team_member(request: HttpRequest, user_id: int) -> HttpResponse:
+    """Remove a member by user id in the current org (used by manage_team.html)."""
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required.")
+    org = svc.membership_primary_org(request.user)
+    if not org:
+        return HttpResponseBadRequest("No organization.")
+
+    # Optional: permission guard
+    # svc._require_admin_or_owner(request.user, org)
+
+    m = get_object_or_404(Membership, organization=org, user_id=user_id, is_active=True)
+    try:
+        svc.membership_remove_member(request.user, m)
+    except ERR.LastOwnerRemovalError as e:
+        # Return a small HTML alert so HTMX swaps it into the target
+        return HttpResponse(
+            f"<div class='alert alert-danger mb-0'>{e}</div>", status=400
+        )
+
+    # We want to remove the LI; return empty so hx-swap="outerHTML" nukes it
+    return HttpResponse("")
 
 
 @login_required

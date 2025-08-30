@@ -1,0 +1,84 @@
+{# Path: templates/thirdparties/solution_form.html #}
+{% extends 'common/base.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+    <h2 class="mb-4">
+      {% if edit_mode %}
+        Edit Solution
+      {% else %}
+        Add Solution
+      {% endif %}
+    </h2>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          <strong>There were errors:</strong>
+          <ul class="mb-0">
+            {% for field, errors in form.errors.items %}
+              {% for error in errors %}
+                <li>{{ field|capfirst }}: {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if third_party %}
+        <div class="mb-3">
+          <label class="form-label"><strong>Third Party: {{ third_party.name }}</strong></label>
+        </div>
+      {% endif %}
+
+      <!-- Solution Info -->
+      <div class="p-4 border rounded bg-light mb-4">
+        <h4 class="mb-3 border-bottom pb-2"><i class="bi bi-box-seam me-1"></i> Solution Details</h4>
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.name.label_tag }} {{ form.name }}</div>
+          <div class="col-md-6">
+            {# service_type is labeled "Solution type" in the model or via form labels #}
+            {{ form.service_type.label_tag }} {{ form.service_type }}
+          </div>
+          <div class="col-12">{{ form.description.label_tag }} {{ form.description }}</div>
+        </div>
+      </div>
+
+      <!-- Data & Sensitivity -->
+      <div class="p-4 border rounded bg-light mb-4">
+        <h4 class="mb-3 border-bottom pb-2"><i class="bi bi-shield-lock me-1"></i> Data & Sensitivity</h4>
+
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.data_sensitivity.label_tag }} {{ form.data_sensitivity }}</div>
+
+          <div class="col-md-6">
+            <label class="form-label d-block">Data Types</label>
+            <div class="form-check form-check-inline">
+              {{ form.processes_pii }} <label class="form-check-label">PII</label>
+            </div>
+            <div class="form-check form-check-inline">
+              {{ form.processes_pci }} <label class="form-check-label">PCI</label>
+            </div>
+            <div class="form-check form-check-inline">
+              {{ form.processes_phi }} <label class="form-check-label">PHI</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save"></i> {% if edit_mode %}
+            Save Changes
+          {% else %}
+            Save
+          {% endif %}
+        </button>
+        <a href="{% url 'thirdparties:service_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

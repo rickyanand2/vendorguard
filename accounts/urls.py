@@ -11,6 +11,7 @@ urlpatterns = [
     # Auth
     path("login/", v.login_view, name="login"),
     path("logout/", v.logout_view, name="logout"),
+    path("profile/", v.profile_view, name="profile"),
     # Registration
     path("register/solo/", v.register_solo_view, name="register_solo"),
     path("register/team/", v.register_team_owner_view, name="register_team"),
@@ -28,6 +29,11 @@ urlpatterns = [
     ),
     # Team management (HTMX-friendly)
     path("team/manage/", v.team_manage_view, name="team_manage"),
+    path(
+        "team/member/<int:user_id>/remove/",
+        v.remove_team_member,
+        name="remove_team_member",
+    ),
     path(
         "team/members/partial/",
         v.team_members_partial_view,

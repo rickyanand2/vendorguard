@@ -44,6 +44,7 @@ class InviteForm(forms.Form):
     role = forms.ChoiceField(
         choices=CH.MembershipRole.choices, initial=CH.MembershipRole.MEMBER
     )
+    job_title = forms.CharField(max_length=100, required=False)
 
 
 class PasswordResetRequestForm(forms.Form):

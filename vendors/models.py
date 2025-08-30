@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 # =========================
@@ -70,12 +71,8 @@ class DocumentType(models.TextChoices):
 # Vendor
 # ===========
 class Vendor(models.Model):
-    """Third-party company (scoped to an Organization)."""
-
     organization = models.ForeignKey(
-        "accounts.Organization",  # string ref prevents circular imports
-        on_delete=models.CASCADE,
-        related_name="vendors",
+        "accounts.Organization", on_delete=models.CASCADE, related_name="vendors"
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -89,22 +86,15 @@ class Vendor(models.Model):
     website = models.URLField(blank=True)
     description = models.TextField(blank=True)
 
-    status = models.CharField(
-        max_length=20,
-        choices=VendorStatus.choices,
-        default=VendorStatus.ACTIVE,
+    # ✅ rename lifecycle status to avoid clashing with workflow state
+    lifecycle_status = models.CharField(
+        max_length=20, choices=VendorStatus.choices, default=VendorStatus.ACTIVE
     )
-    tier = models.IntegerField(
-        choices=Tier.choices,
-        default=Tier.TIER_3,
-    )
+    tier = models.IntegerField(choices=Tier.choices, default=Tier.TIER_3)
     criticality = models.CharField(
-        max_length=10,
-        choices=Criticality.choices,
-        default=Criticality.MEDIUM,
+        max_length=10, choices=Criticality.choices, default=Criticality.MEDIUM
     )
 
-    # Simple risk snapshot (keep it flexible; detailed scoring can live in assessments app)
     risk_rating = models.PositiveSmallIntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -113,13 +103,11 @@ class Vendor(models.Model):
     last_assessed = models.DateField(null=True, blank=True)
     next_review_due = models.DateField(null=True, blank=True)
 
-    # Flags often needed in TPRM
     dpia_required = models.BooleanField(default=False)
     processes_pii = models.BooleanField(default=True)
     processes_pci = models.BooleanField(default=False)
     processes_phi = models.BooleanField(default=False)
 
-    # Basic contact channel (primary). Detailed contacts live in VendorContact.
     support_email = models.EmailField(blank=True)
     security_contact_email = models.EmailField(blank=True)
     security_portal_url = models.URLField(blank=True)
@@ -127,34 +115,28 @@ class Vendor(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    #######################################################
-    # Attach Workflow Fields
-    #######################################################
-    tenant_id = models.IntegerField(
-        null=True, blank=True
-    )  # enables SAME_TENANT guard (isolation)
-    status = models.CharField(
-        max_length=50, default="DRAFT"
-    )  # for MIRROR_STATE/filters/badges
+    # ✅ archiving used by your views
+    archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
+    # ✅ workflow meta (rename to avoid collision)
+    tenant_id = models.IntegerField(null=True, blank=True)
+    wf_state = models.CharField(max_length=50, default="DRAFT")
 
     class Meta:
         ordering = ["name"]
         indexes = [
             models.Index(fields=["organization", "name"]),
-            models.Index(fields=["status"]),
+            models.Index(fields=["wf_state"]),
             models.Index(fields=["tier"]),
             models.Index(fields=["criticality"]),
+            models.Index(fields=["archived"]),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["organization", "name"],
-                name="uniq_vendor_name_per_org",
+                fields=["organization", "name"], name="uniq_vendor_name_per_org"
             )
         ]
-        #######################################################
-        # Workflow Meta
-        #######################################################
-        # These four custom permissions are used by the standard 4-state workflow installer
         permissions = [
             ("can_submit", "Can submit vendor for approval"),
             ("can_request_changes", "Can request changes on vendor"),

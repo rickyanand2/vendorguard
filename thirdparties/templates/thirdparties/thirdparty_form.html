@@ -1,0 +1,143 @@
+{# Path: templates/thirdparties/thirdparty_form.html #}
+{% extends 'common/base.html' %}
+{% load static %}
+
+{% block content %}
+  <div class="container py-4">
+    <h2 class="fw-bold mb-3">
+      {% if edit_mode %}
+        Edit Third Party
+      {% else %}
+        Add Third Party
+      {% endif %}
+    </h2>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light fw-semibold">Identity</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              {{ form.name }} {% for e in form.name.errors %}
+                <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Website</label>
+              {{ form.website }} {% for e in form.website.errors %}
+                <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              {{ form.description }} {% for e in form.description.errors %}
+                <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light fw-semibold">Business Posture & Risk</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Lifecycle Status</label>
+              {{ form.lifecycle_status }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tier</label>
+              {{ form.tier }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Criticality</label>
+              {{ form.criticality }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Risk Snapshot (0–100)</label>
+              {{ form.risk_snapshot }}
+              <div class="form-text">{{ form.fields.risk_snapshot.help_text }}</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Last Assessed</label>
+              {{ form.last_assessed }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Next Review Due</label>
+              {{ form.next_review_due }}
+            </div>
+          </div>
+
+          <div class="row g-3 mt-0">
+            <div class="col-md-4 form-check mt-4">
+              {{ form.dpia_required }} <label class="form-check-label">DPIA Required</label>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label d-block">Data Types</label>
+              <div class="form-check form-check-inline">
+                {{ form.processes_pii }} <label class="form-check-label">PII</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{ form.processes_pci }} <label class="form-check-label">PCI</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{ form.processes_phi }} <label class="form-check-label">PHI</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light fw-semibold">Security Contacts</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Support Email</label>
+              {{ form.support_email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Security Contact Email</label>
+              {{ form.security_contact_email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Security Portal URL</label>
+              {{ form.security_portal_url }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light fw-semibold">Trust Profile</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Trust Score (0–1000)</label>
+              {{ trust_form.trust_score }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Notes</label>
+              {{ trust_form.notes }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'thirdparties:thirdparty_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button class="btn btn-primary" type="submit">
+          {% if edit_mode %}
+            Save Changes
+          {% else %}
+            Create
+          {% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

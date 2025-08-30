@@ -216,8 +216,9 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         wf = _install(
             flow_name=opts["name"],
-            perm_ns=opts["perm-ns"],
-            owner_required_on_submit=opts["owner-required-on-submit"],
-            include_complete_from_draft=not opts["no-complete-from-draft"],
+            perm_ns=opts["perm_ns"],  # underscore key!
+            owner_required_on_submit=opts["owner_required_on_submit"],
+            include_complete_from_draft=not opts["no_complete_from_draft"],
         )
+
         self.stdout.write(self.style.SUCCESS(f"Installed/updated workflow '{wf.name}'"))

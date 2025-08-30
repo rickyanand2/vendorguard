@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",  # Custom user, orgs, invites, auth
     "website",
     "dashboard",
-    "vendors",
+    "thirdparties",  # Third party/ vendor app
+    "vendors",  # To be archived
     "assessments",
     "workflow",
     "common",

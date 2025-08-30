@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'common/base.html' %}
 {% block title %}
   Manage Team
 {% endblock %}
@@ -25,10 +25,10 @@
     <h5 class="mt-5">Current Team Members</h5>
     <ul class="list-group">
       {% for member in members %}
-        <li class="list-group-item d-flex justify-content-between">
+        <li id="member-{{ member.id }}" class="list-group-item d-flex justify-content-between">
           <span>{{ member.user.full_name }} - {{ member.user.email }}</span>
           {% if member.user != request.user %}
-            <form method="post" hx-post="{% url 'accounts:remove_team_member' member.user.id %}" hx-confirm="Remove this user?" hx-swap="outerHTML">
+            <form method="post" hx-post="{% url 'accounts:remove_team_member' member.user.id %}" hx-target="#member-{{ member.id }}" hx-swap="outerHTML" hx-confirm="Remove this user?">
               {% csrf_token %}
               <button class="btn btn-sm btn-danger">Remove</button>
             </form>

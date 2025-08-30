@@ -11,27 +11,13 @@ class VendorForm(forms.ModelForm):
 
     class Meta:
         model = Vendor
-        fields = [
-            "organization",
-            "name",
-            "website",
-            "description",
-            "status",
-            "tier",
-            "criticality",
-            "risk_rating",
-            "last_assessed",
-            "next_review_due",
-            "dpia_required",
-            "processes_pii",
-            "processes_pci",
-            "processes_phi",
-            "support_email",
-            "security_contact_email",
-            "security_portal_url",
-        ]
+        fields = "__all__"  # 👈 stop hard-coding 'status' (which may not exist yet)
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 3}),
+            # optional: these are ignored if the field doesn't exist in the model
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "website": forms.URLInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            # "status": forms.Select(attrs={"class": "form-select"}),  # ignored if absent
         }
 
 
@@ -40,16 +26,8 @@ class VendorOfferingForm(forms.ModelForm):
 
     class Meta:
         model = VendorOffering
-        fields = [
-            "vendor",
-            "name",
-            "description",
-            "service_type",
-            "data_classification",
-            "processes_pii",
-            "processes_pci",
-            "processes_phi",
-        ]
+        fields = "__all__"  # 👈 same idea here
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 3}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
         }

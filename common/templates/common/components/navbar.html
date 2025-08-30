@@ -1,38 +1,96 @@
-<nav class="navbar navbar-light bg-white shadow-sm px-4 py-3 sticky-top">
-  <a class="navbar-brand fw-bold fs-4" href="{% url 'website:home' %}">VendorGuard</a>
-  <div class="ms-auto d-flex align-items-center flex-wrap">
-    <a href="{% url 'common:test_layout' %}" class="me-3 text-muted text-decoration-none">|| Test Layout Template ||</a>
-    {% if user.is_authenticated %}
-      {% if user.is_owner %}
-        <a href="{% url 'dashboard:dashboard' %}" class="me-3 text-muted text-decoration-none">Dashboard</a>
-        <a href="{% url 'accounts:team_manage' %}" class="me-3 text-muted text-decoration-none">Team</a>
-      {% endif %}
-      <div class="dropdown me-3">
-        <a class="text-muted text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Assessments</a>
-        <ul class="dropdown-menu">
-          <li>
-            <a class="dropdown-item" href="{% url 'assessments:questionnaire_list' %}">Questionnaires</a>
+{# Path: common/_nav.html (or wherever your nav lives) #}
+<nav class="navbar navbar-light navbar-expand-lg bg-white shadow-sm px-4 py-3 sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold fs-4" href="{% url 'website:home' %}">VendorGuard</a>
+
+    <!-- Mobile toggler -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <!-- Test layout link (kept) -->
+        <li class="nav-item me-lg-2">
+          <a href="{% url 'common:test_layout' %}" class="nav-link text-muted">|| Test Layout Template ||</a>
+        </li>
+
+        {% if user.is_authenticated %}
+          {% with current=request.resolver_match %}
+            {% with ns=current.namespace name=current.url_name %}
+              {% if user.is_owner %}
+                <li class="nav-item me-lg-2">
+                  <a href="{% url 'dashboard:dashboard' %}" class="nav-link {% if ns == 'dashboard' %}active{% endif %}">Dashboard</a>
+                </li>
+                <li class="nav-item me-lg-2">
+                  <a href="{% url 'accounts:team_manage' %}" class="nav-link {% if ns == 'accounts' and name == 'team_manage' %}active{% endif %}">Team</a>
+                </li>
+              {% endif %}
+
+              <!-- Assessments dropdown -->
+              <li class="nav-item dropdown me-lg-2">
+                <a class="nav-link dropdown-toggle {% if ns == 'assessments' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Assessments</a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'assessments:questionnaire_list' %}">Questionnaires</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'assessments:question_list' %}">Questions</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'assessments:assessment_list' %}">All Assessments</a>
+                  </li>
+                </ul>
+              </li>
+
+              <!-- Third Parties dropdown (new) -->
+              <li class="nav-item dropdown me-lg-2">
+                <a class="nav-link dropdown-toggle {% if ns == 'thirdparties' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Third Parties</a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'thirdparties:thirdparty_list' %}">All Third Parties</a>
+                  </li>
+                  <li>
+                    {# Uses the solution alias route we added; same view as service_list #}
+                    <a class="dropdown-item" href="{% url 'thirdparties:solution_list' %}">All Solutions</a>
+                  </li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'thirdparties:thirdparty_create' %}">Add Third Party</a>
+                  </li>
+                  {# Creating a Solution needs a third party context; keep add from detail page #}
+                </ul>
+              </li>
+
+              <!-- Profile -->
+              <li class="nav-item me-lg-2">
+                <a href="{% url 'accounts:profile' %}" class="nav-link {% if ns == 'accounts' and name == 'profile' %}active{% endif %}">Profile</a>
+              </li>
+
+              <!-- Logout -->
+              <li class="nav-item">
+                <form action="{% url 'accounts:logout' %}" method="post" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-link nav-link text-muted p-0">Logout</button>
+                </form>
+              </li>
+            {% endwith %}
+          {% endwith %}
+        {% else %}
+          <li class="nav-item me-lg-2">
+            <a href="{% url 'accounts:login' %}" class="nav-link text-muted">Login</a>
           </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'assessments:question_list' %}">Questions</a>
+          <li class="nav-item me-lg-2">
+            <a href="#" class="nav-link text-muted">Features</a>
           </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'assessments:assessment_list' %}">All Assessments</a>
+          <li class="nav-item me-lg-2">
+            <a href="#" class="nav-link text-muted">Pricing</a>
           </li>
-        </ul>
-      </div>
-      <a href="{% url 'vendors:vendor_list' %}" class="me-3 text-muted text-decoration-none">Vendors</a>
-      <a href="{% url 'vendors:offering_list' %}" class="me-3 text-muted text-decoration-none">Offerings</a>
-      <a href="{% url 'accounts:profile' %}" class="me-3 text-muted text-decoration-none">Profile</a>
-      <form action="{% url 'accounts:logout' %}" method="post" class="mb-0">
-        {% csrf_token %}
-        <button type="submit" class="me-3 btn btn-link text-muted text-decoration-none p-0 align-baseline">Logout</button>
-      </form>
-    {% else %}
-      <a href="{% url 'accounts:login' %}" class="me-3 text-muted text-decoration-none">Login</a>
-      <a href="#" class="me-3 text-muted text-decoration-none">Features</a>
-      <a href="#" class="me-3 text-muted text-decoration-none">Pricing</a>
-      <a href="{% url 'accounts:register_solo' %}" class="btn btn-brand">Get Started</a>
-    {% endif %}
+          <li class="nav-item">
+            <a href="{% url 'accounts:register_solo' %}" class="btn btn-brand ms-lg-2">Get Started</a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
   </div>
 </nav>

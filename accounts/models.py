@@ -184,6 +184,30 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
+    @property
+    def organization(self):
+        """
+        Return the user's active organization.
+        Works whether you store org directly on user or via Membership.
+        """
+        # direct field on user (if you ever add one)
+        org = getattr(self, "_organization", None)
+        if org is not None:
+            return org
+
+        # via Membership (preferred multi-tenant pattern)
+        try:
+            from accounts.models import Membership  # local import to avoid cycles
+
+            m = (
+                Membership.objects.filter(user=self, is_active=True)
+                .select_related("organization")
+                .first()
+            )
+            return m.organization if m else None
+        except Exception:
+            return None
+
     class Meta:
         ordering = ["-date_joined"]
 

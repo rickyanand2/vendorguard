@@ -1,0 +1,103 @@
+{# Path: templates/thirdparties/thirdparty_list.html #}
+{% extends 'common/base.html' %}
+{% load static %}
+
+{% block content %}
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-bold mb-0">Third Parties</h2>
+      <a href="{% url 'thirdparties:thirdparty_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Add Third Party</a>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 28%">Name</th>
+              <th style="width: 12%">Tier</th>
+              <th style="width: 12%">Criticality</th>
+              <th style="width: 12%">Risk (0–100)</th>
+              <th style="width: 12%">Trust (0–1000)</th>
+              <th style="width: 12%">Services</th>
+              <th class="text-end" style="width: 12%">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tp in third_parties %}
+              <tr>
+                <td>
+                  <a class="text-decoration-none fw-semibold" href="{% url 'thirdparties:thirdparty_detail' tp.pk %}">{{ tp.name }}</a>
+                  {% if tp.website %}
+                    <div class="small text-muted">{{ tp.website }}</div>
+                  {% endif %}
+                  <div class="mt-1">
+                    {% if tp.archived %}
+                      <span class="badge bg-secondary">Archived</span>
+                    {% else %}
+                      <span class="badge bg-info text-dark">{{ tp.lifecycle_status|title }}</span>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td>{{ tp.get_tier_display }}</td>
+                <td>{{ tp.get_criticality_display }}</td>
+
+                <td>
+                  {% with val=tp.risk_snapshot|default:0 %}
+                    {% if val < 34 %}
+                      <span class="badge bg-success">{{ val }}</span>
+                    {% elif val < 67 %}
+                      <span class="badge bg-warning text-dark">{{ val }}</span>
+                    {% else %}
+                      <span class="badge bg-danger">{{ val }}</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+
+                <td>
+                  {% with trust=tp.trust_profile %}
+                    {% if trust and trust.trust_score is not None %}
+                      {% if trust.trust_score < 334 %}
+                        <span class="badge bg-success">{{ trust.trust_score }}</span>
+                      {% elif trust.trust_score < 667 %}
+                        <span class="badge bg-warning text-dark">{{ trust.trust_score }}</span>
+                      {% else %}
+                        <span class="badge bg-danger">{{ trust.trust_score }}</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge bg-secondary">–</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+
+                <td>
+                  {% with cnt=tp.services.count %}
+                    {% if cnt > 0 %}
+                      <span class="badge bg-primary">{{ cnt }}</span>
+                    {% else %}
+                      <span class="text-muted">None</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+
+                <td class="text-end text-nowrap">
+                  <a href="{% url 'thirdparties:thirdparty_detail' tp.pk %}" class="btn btn-outline-dark btn-sm me-1"><i class="bi bi-eye"></i> View</a>
+                  <a href="{% url 'thirdparties:thirdparty_update' tp.pk %}" class="btn btn-outline-primary btn-sm me-1"><i class="bi bi-pencil"></i> Edit</a>
+                  <form method="post" action="{% url 'thirdparties:thirdparty_archive' tp.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Archive {{ tp.name }}?');"><i class="bi bi-archive"></i> Archive</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">No third parties yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

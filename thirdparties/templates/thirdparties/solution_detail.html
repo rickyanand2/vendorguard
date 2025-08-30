@@ -1,0 +1,85 @@
+{# Path: templates/thirdparties/solution_detail.html #}
+{% extends 'common/base.html' %}
+
+{% block content %}
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Solution: {{ service.name }}</h5>
+            <div class="d-flex gap-2">
+              <a href="{% url 'thirdparties:service_update' service.id %}" class="btn btn-sm btn-light"><i class="bi bi-pencil-square"></i> Edit</a>
+              <form method="post" action="{% url 'thirdparties:service_archive' service.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-light" onclick="return confirm('Archive {{ service.name }}?');"><i class="bi bi-archive"></i> Archive</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <p>
+              <strong>Description:</strong><br /> {{ service.description|default:'—' }}
+            </p>
+
+            <p>
+              <strong>Third Party:</strong>
+              <a href="{% url 'thirdparties:thirdparty_detail' service.third_party.id %}">{{ service.third_party.name }}</a>
+            </p>
+
+            <p class="mb-1">
+              <strong>Solution Type:</strong>
+              <span class="badge bg-secondary">{{ service.get_service_type_display }}</span>
+            </p>
+            <p class="mb-3">
+              <strong>Data Sensitivity:</strong>
+              <span class="badge bg-dark">{{ service.get_data_sensitivity_display }}</span>
+            </p>
+
+            <hr />
+            <p class="mb-2">
+              <strong>Data Characteristics:</strong>
+            </p>
+            <ul class="list-unstyled ms-3 mb-0">
+              <li>
+                {% if service.processes_pii %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Processes PII
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Process PII
+                {% endif %}
+              </li>
+              <li>
+                {% if service.processes_pci %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Handles PCI
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Handle PCI
+                {% endif %}
+              </li>
+              <li>
+                {% if service.processes_phi %}
+                  <i class="bi bi-check-circle-fill text-success"></i> Handles PHI
+                {% else %}
+                  <i class="bi bi-x-circle text-danger"></i> Does Not Handle PHI
+                {% endif %}
+              </li>
+            </ul>
+
+            <hr />
+            <div class="row">
+              <div class="col-md-6">
+                <strong>Created:</strong> {{ service.created_at|date:'M d, Y' }}
+              </div>
+              <div class="col-md-6">
+                <strong>Last Updated:</strong> {{ service.updated_at|date:'M d, Y' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer text-end">
+            <a href="{% url 'thirdparties:service_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Solutions</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

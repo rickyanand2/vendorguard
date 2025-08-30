@@ -14,10 +14,13 @@ urlpatterns = [
     # Built-in auth views: password reset, etc.
     path("accounts/", include("django.contrib.auth.urls")),
     path("dashboard/", include("dashboard.urls", namespace="dashboard")),
-    # ✅ New apps
-    path("vendors/", include("vendors.urls", namespace="vendors")),
     path("assessments/", include("assessments.urls", namespace="assessments")),
-    path("common/", include("common.urls")),
+    path("common/", include("common.urls", namespace="common")),
+    path(
+        "thirdparties/",
+        include(("thirdparties.urls", "thirdparties"), namespace="thirdparties"),
+    ),
+    # path("vendors/", include("vendors.urls", namespace="vendors")),
 ]
 
 # Serve static files in dev mode

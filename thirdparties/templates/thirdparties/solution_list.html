@@ -1,0 +1,103 @@
+{# Path: templates/thirdparties/solution_list.html #}
+{% extends 'common/base.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0"><i class="bi bi-box-seam"></i> All Solutions</h4>
+      {# Creating a solution requires a third-party context; add button on third-party detail page #}
+    </div>
+
+    {% if solutions %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle bg-white shadow-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Third Party</th>
+              <th>Solution Type</th>
+              <th>Data Sensitivity</th>
+              <th>Created</th>
+              <th style="width: 220px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for service in solutions %}
+              <tr>
+                <td class="fw-semibold">
+                  <a class="text-decoration-none" href="{% url 'thirdparties:service_detail' service.id %}">{{ service.name }}</a>
+                </td>
+                <td>{{ service.description|default:'—'|truncatechars:80 }}</td>
+                <td>
+                  <a href="{% url 'thirdparties:thirdparty_detail' service.third_party.id %}">{{ service.third_party.name }}</a>
+                </td>
+                <td>
+                  <span class="badge bg-secondary">{{ service.get_service_type_display }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-dark">{{ service.get_data_sensitivity_display }}</span>
+                </td>
+                <td title="{{ service.created_at }}">{{ service.created_at|date:'M d, Y' }}</td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    <a href="{% url 'thirdparties:service_detail' service.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                    <a href="{% url 'thirdparties:service_update' service.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> Edit</a>
+                    <form method="post" action="{% url 'thirdparties:service_archive' service.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Archive {{ service.name }}?');"><i class="bi bi-archive"></i> Archive</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# Optional pagination block if your view paginates `solutions` #}
+      {% if solutions.has_other_pages %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            {% if solutions.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ solutions.previous_page_number }}">Previous</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Previous</span>
+              </li>
+            {% endif %}
+
+            {% for num in solutions.paginator.page_range %}
+              {% if solutions.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > solutions.number|add:'-3' and num < solutions.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if solutions.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ solutions.next_page_number }}">Next</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Next</span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="text-center my-5">
+        <p class="text-muted mb-3">No solutions found.</p>
+        <a href="{% url 'thirdparties:thirdparty_list' %}" class="btn btn-primary">Choose a Third Party to Add a Solution</a>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
